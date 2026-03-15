@@ -1,0 +1,21 @@
+#!/bin/bash
+# Unlocks .env files for editing. Run lock-env when done.
+# Must be run as root (or via sudo on VM).
+
+set -euo pipefail
+
+UNLOCKED=0
+for f in .env .env.local .env.secrets .env.development .env.production; do
+  if [ -f "$f" ]; then
+    chown agent:agent "$f"
+    chmod 600 "$f"
+    echo "unlocked: $f"
+    UNLOCKED=$((UNLOCKED + 1))
+  fi
+done
+
+if [ $UNLOCKED -eq 0 ]; then
+  echo "No .env files found in $(pwd)"
+fi
+
+echo "Remember to run 'lock-env' when done editing."

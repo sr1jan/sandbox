@@ -1,0 +1,30 @@
+services:
+  devbox:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: devbox
+    volumes:
+      # All projects + pi-mono source
+      - ~/fun:/workspace
+      # Global secrets (CLI credentials: gh, aws, gcloud)
+      - ./secrets:/etc/devbox/secrets
+      # Neovim config
+      - ~/.config/nvim:/home/agent/.config/nvim
+      # Vim runtime (local plugins referenced by nvim config)
+      - ~/dotfiles/vim_runtime:/home/agent/.vim_runtime:ro
+      # Tmux customizations (.tmux.conf is baked in from latest gpakosz/.tmux)
+      - ~/.tmux.conf.local:/home/agent/.tmux.conf.local:ro
+    ports:
+      # OAuth: host port → socat bridge port → Pi's 127.0.0.1 port
+      - "53692:43692"   # Anthropic  (socat 43692 → 127.0.0.1:53692)
+      - "1455:41455"    # OpenAI     (socat 41455 → 127.0.0.1:1455)
+      - "8085:48085"    # Google     (socat 48085 → 127.0.0.1:8085)
+      - "51121:41121"   # Antigrav   (socat 41121 → 127.0.0.1:51121)
+    cap_add:
+      - SYS_ADMIN    # for bind mount to shadow .env files
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    stdin_open: true
+    tty: true
+    restart: unless-stopped

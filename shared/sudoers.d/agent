@@ -1,0 +1,5 @@
+# Agent user can run the credential wrapper and get an admin shell.
+# Pi's cred-guard extension blocks the agent from running sudo bash via bash tool.
+# sudo bash is only used manually from the admin tmux window.
+agent ALL=(root) NOPASSWD: /usr/local/bin/run *
+agent ALL=(root) NOPASSWD: /bin/bash

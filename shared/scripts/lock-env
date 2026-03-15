@@ -1,0 +1,20 @@
+#!/bin/bash
+# Locks all .env files in current directory to root-only access.
+# Run this after creating/editing .env files.
+# Must be run as root (or via sudo on VM).
+
+set -euo pipefail
+
+LOCKED=0
+for f in .env .env.local .env.secrets .env.development .env.production; do
+  if [ -f "$f" ]; then
+    chown root:root "$f"
+    chmod 600 "$f"
+    echo "locked: $f"
+    LOCKED=$((LOCKED + 1))
+  fi
+done
+
+if [ $LOCKED -eq 0 ]; then
+  echo "No .env files found in $(pwd)"
+fi

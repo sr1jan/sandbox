@@ -1,0 +1,7 @@
+# Real credentials — NEVER commit
+docker/secrets
+*.pem
+*.key
+
+# Docker build artifacts
+docker/.env

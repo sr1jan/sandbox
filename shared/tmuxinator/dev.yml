@@ -1,0 +1,23 @@
+---
+# Runs INSIDE the container/VM. Single tmux layer.
+# tmux runs as agent user (so Pi's tmux-tools extension works).
+# Admin window uses sudo bash for root access.
+# Started via: tmuxinator start dev
+
+name: dev
+root: /workspace
+
+startup_window: AISpotlight
+
+windows:
+  # Root shell via sudo — credential management
+  - admin:
+      panes:
+        - sudo bash
+
+  # Pi agent windows
+  - AISpotlight:
+      root: /workspace/AISpotlight
+      panes:
+        - pi
+        - ""
