@@ -1,8 +1,8 @@
 services:
   devbox:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: ../..
+      dockerfile: hosts/docker-mac/Dockerfile
     container_name: devbox
     volumes:
       # All projects + pi-mono source

@@ -84,7 +84,7 @@ RUN mkdir -p /home/agent/.local/bin \
 RUN chown -R agent:agent /home/agent
 
 # Entrypoint: locks .env files, builds pi if needed, drops to agent
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY hosts/docker-mac/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh
 
 WORKDIR /workspace
