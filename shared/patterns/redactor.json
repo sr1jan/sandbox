@@ -1,0 +1,22 @@
+{
+  "description": "Regex patterns matching credential-looking strings in tool output. Matches are replaced with [REDACTED] before the output is returned to the agent's context. Patterns are JavaScript-flavored; the Claude Code shell hook translates to POSIX ERE at runtime.",
+  "replacement": "[REDACTED]",
+  "patterns": [
+    "sk-ant-[a-zA-Z0-9_-]+",
+    "sk-proj-[a-zA-Z0-9_-]+",
+    "sk-[a-zA-Z0-9]{48,}",
+    "ghp_[a-zA-Z0-9]{36,}",
+    "gho_[a-zA-Z0-9]{36,}",
+    "ghs_[a-zA-Z0-9]{36,}",
+    "github_pat_[a-zA-Z0-9_]+",
+    "AKIA[A-Z0-9]{16}",
+    "glpat-[a-zA-Z0-9_-]+",
+    "xoxb-[a-zA-Z0-9-]+",
+    "xoxp-[a-zA-Z0-9-]+",
+    "AIza[a-zA-Z0-9_-]{35}",
+    "Bearer\\s+[a-zA-Z0-9_.-]{20,}",
+    "token[\"\\s:=]+[a-zA-Z0-9_.-]{20,}",
+    "password[\"\\s:=]+\\S+",
+    "secret[\"\\s:=]+\\S+"
+  ]
+}
