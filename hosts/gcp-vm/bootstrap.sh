@@ -69,8 +69,8 @@ fi
 # --- Pi extensions and skills ---
 echo "[5/7] Installing Pi extensions and skills..."
 sudo -u agent mkdir -p /home/agent/.pi/agent/extensions /home/agent/.pi/agent/skills
-sudo cp "$SANDBOX_DIR/shared/extensions/"*.ts /home/agent/.pi/agent/extensions/
-sudo cp -r "$SANDBOX_DIR/shared/skills/"* /home/agent/.pi/agent/skills/
+sudo cp "$SANDBOX_DIR/agents/pi/extensions/"*.ts /home/agent/.pi/agent/extensions/
+sudo cp -r "$SANDBOX_DIR/agents/pi/skills/"* /home/agent/.pi/agent/skills/
 sudo chown -R agent:agent /home/agent/.pi
 
 # --- Editor and tmux configs for agent ---
