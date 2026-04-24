@@ -2,12 +2,14 @@
 # Runs a command with credentials loaded. Called via: sudo run <command>
 #
 # 1. Loads global CLI credentials (/etc/devbox/secrets)
-# 2. Loads project-local credentials (.env in cwd)
-# 3. Drops privileges to 'agent' user
-# 4. Execs the command
-#
-# The agent user cannot read the secrets files directly.
-# This script runs as root (via sudo) and drops privileges after loading.
+# 2. Loads project-local .env files (from locked dir; fallback to cwd)
+# 3. Copies a project-local creds/ directory to a per-invocation tmpdir
+#    owned by agent (so the subprocess can read service-account JSONs
+#    etc., but the agent user's shell cannot read them at the canonical
+#    locked location); auto-exports GOOGLE_APPLICATION_CREDENTIALS when
+#    a well-known filename is present
+# 4. Drops privileges to 'agent' user via gosu
+# 5. Runs the command; cleans up the tmpdir on exit
 
 set -euo pipefail
 
@@ -19,8 +21,8 @@ if [ -f "$GLOBAL_SECRETS" ]; then
   set +a
 fi
 
-# Project-local credentials from locked location
-# Entrypoint copies .env files from /workspace/<project>/ to /etc/devbox/locked/projects/<project>/
+# Project-local .env files from locked location. Entrypoint copies
+# .env files from /workspace/<project>/ to /etc/devbox/locked/projects/<project>/
 CWD="$(pwd)"
 REL="${CWD#/workspace/}"
 LOCKED_DIR="/etc/devbox/locked/projects/$REL"
@@ -41,10 +43,48 @@ for f in .env .env.local .env.secrets .env.development; do
   fi
 done
 
+# Multi-file creds handling — per-invocation tmpdir, cleaned up on exit.
+# This lets the subprocess read files like Google service-account JSONs
+# while the agent user's shell cannot read them at /etc/devbox/locked/
+# (which is root:700). See spec §5.4 / ADR 0005.
+TMPDIR_CREDS=""
+cleanup_creds() {
+  if [ -n "${TMPDIR_CREDS:-}" ] && [ -d "$TMPDIR_CREDS" ]; then
+    rm -rf "$TMPDIR_CREDS"
+  fi
+}
+trap cleanup_creds EXIT
+
+LOCKED_CREDS_DIR="$LOCKED_DIR/creds"
+if [ -d "$LOCKED_CREDS_DIR" ]; then
+  TMPDIR_CREDS="$(mktemp -d -t run-creds-XXXXXX)"
+  cp -r "$LOCKED_CREDS_DIR"/. "$TMPDIR_CREDS/"
+  chown -R agent:agent "$TMPDIR_CREDS"
+  chmod 700 "$TMPDIR_CREDS"
+  find "$TMPDIR_CREDS" -type f -exec chmod 600 {} +
+
+  # Auto-export GOOGLE_APPLICATION_CREDENTIALS if a known SA filename is present.
+  for candidate in \
+      "$TMPDIR_CREDS/service-account.json" \
+      "$TMPDIR_CREDS/google-sa.json"; do
+    if [ -f "$candidate" ]; then
+      export GOOGLE_APPLICATION_CREDENTIALS="$candidate"
+      break
+    fi
+  done
+  if [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+    sa_file="$(find "$TMPDIR_CREDS" -maxdepth 1 -name '*-sa.json' -type f | head -n1)"
+    if [ -n "$sa_file" ]; then
+      export GOOGLE_APPLICATION_CREDENTIALS="$sa_file"
+    fi
+  fi
+fi
+
 if [ $# -eq 0 ]; then
   echo "Usage: sudo run <command> [args...]"
   exit 1
 fi
 
-# Drop to agent user and exec
-exec gosu agent "$@"
+# Drop to agent user and run. We do NOT use exec here so the EXIT trap
+# fires for tmpdir cleanup. The script exits with gosu's exit status.
+gosu agent "$@"
