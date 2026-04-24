@@ -61,7 +61,7 @@ sudo chown root:root /etc/devbox
 sudo chmod 700 /etc/devbox
 
 if [ ! -f /etc/devbox/secrets ]; then
-  sudo cp "$SANDBOX_DIR/docker/secrets.example" /etc/devbox/secrets
+  sudo cp "$SANDBOX_DIR/hosts/docker-mac/secrets.example" /etc/devbox/secrets
   sudo chmod 600 /etc/devbox/secrets
   echo "  → Edit /etc/devbox/secrets with your CLI credentials"
 fi
