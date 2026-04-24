@@ -16,28 +16,42 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const MAX_PANES = 8;
 
-// Credential patterns to redact from captured output
-const CREDENTIAL_PATTERNS = [
-	/sk-ant-[a-zA-Z0-9_-]+/g,
-	/sk-proj-[a-zA-Z0-9_-]+/g,
-	/sk-[a-zA-Z0-9]{48,}/g,
-	/ghp_[a-zA-Z0-9]{36,}/g,
-	/gho_[a-zA-Z0-9]{36,}/g,
-	/ghs_[a-zA-Z0-9]{36,}/g,
-	/github_pat_[a-zA-Z0-9_]+/g,
-	/AKIA[A-Z0-9]{16}/g,
-	/glpat-[a-zA-Z0-9_-]+/g,
-	/xoxb-[a-zA-Z0-9-]+/g,
-	/xoxp-[a-zA-Z0-9-]+/g,
-	/AIza[a-zA-Z0-9_-]{35}/g,
-	/Bearer\s+[a-zA-Z0-9_.-]{20,}/g,
-	/token["\s:=]+[a-zA-Z0-9_.-]{20,}/gi,
-	/password["\s:=]+\S+/gi,
-	/secret["\s:=]+\S+/gi,
-];
+// Credential patterns to redact from captured output.
+// Loaded from shared/patterns/redactor.json — the same source the
+// Claude Code PostToolUse redactor hook consumes.
+interface RedactorPatterns {
+	replacement: string;
+	patterns: string[];
+}
+
+function loadRedactorPatterns(): RegExp[] {
+	const candidates = [
+		"/home/agent/.pi/agent/patterns/redactor.json",
+		join(__dirname, "..", "patterns", "redactor.json"),
+	];
+	for (const path of candidates) {
+		try {
+			const parsed: RedactorPatterns = JSON.parse(readFileSync(path, "utf-8"));
+			// Detect which patterns need the case-insensitive flag (those that
+			// match identifier words like token/password/secret). In the
+			// original hardcoded list these used /gi; all others used /g.
+			return parsed.patterns.map((p) => {
+				const needsCaseInsensitive = /token|password|secret/i.test(p);
+				return new RegExp(p, needsCaseInsensitive ? "gi" : "g");
+			});
+		} catch {
+			continue;
+		}
+	}
+	throw new Error("redactor.json not found");
+}
+
+const CREDENTIAL_PATTERNS = loadRedactorPatterns();
 
 // Same bash patterns as cred-guard — block credential-exposing commands in panes
 const BLOCKED_COMMANDS = [
