@@ -1,0 +1,13 @@
+{
+  "file_patterns": [
+    "\\.env($|\\.)",
+    "/etc/devbox/secrets",
+    "\\.aws/credentials"
+  ],
+  "bash_patterns": [
+    "\\bcat\\b.*\\.env",
+    "\\bprintenv\\b",
+    "\\bsudo\\s+cat\\b",
+    "python.*os\\.environ"
+  ]
+}
