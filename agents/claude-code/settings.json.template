@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/cred-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/redactor.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_HOOKS_PATTERNS_DIR": "$HOME/.claude/hooks/patterns"
+  }
+}
