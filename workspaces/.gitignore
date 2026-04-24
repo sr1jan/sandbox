@@ -1,0 +1,13 @@
+# Real secrets files (per workspace). Keep *.example committed.
+*.secrets.env
+!*.secrets.env.example
+
+# Terraform state artifacts (should never be placed here anyway,
+# but double-belt if someone tries).
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# macOS cruft
+.DS_Store

@@ -1,7 +1,17 @@
 # Real credentials — NEVER commit
-docker/secrets
+hosts/docker-mac/secrets
 *.pem
 *.key
 
 # Docker build artifacts
-docker/.env
+hosts/docker-mac/.env
+
+# Terraform state and provider cache (local state is per-workspace)
+hosts/*/terraform/.terraform/
+hosts/*/terraform/terraform.tfstate
+hosts/*/terraform/terraform.tfstate.*
+hosts/*/terraform/terraform.tfstate.d/
+hosts/*/terraform/*.tfvars   # workspace tfvars live in workspaces/, not here
+
+# macOS cruft
+.DS_Store
