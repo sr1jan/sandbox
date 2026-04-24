@@ -36,7 +36,7 @@ load test_helper
   multi="Keys: sk-ant-ONE-xyz and AKIAIOSFODNN7EXAMPLE in one string"
   run bash "$HOOKS_DIR/redactor.sh" <<< "$(post_event "$multi")"
   [ "$status" -eq 0 ]
-  match_count="$(grep -oc '\[REDACTED\]' <<< "$output" || true)"
+  match_count="$(grep -o '\[REDACTED\]' <<< "$output" | wc -l | tr -d ' ')"
   [ "$match_count" -ge 2 ]
 }
 
