@@ -8,7 +8,7 @@ cd "$SCRIPT_DIR"
 if [ ! -f secrets ]; then
   echo "No secrets file found. Creating from template..."
   cp secrets.example secrets
-  echo "Edit docker/secrets with your CLI credentials, then run again."
+  echo "Edit hosts/docker-mac/secrets with your CLI credentials, then run again."
   exit 1
 fi
 
