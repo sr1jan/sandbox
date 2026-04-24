@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod +x:*)",
+      "Bash(ln -sf:*)",
+      "Bash(docker compose build:*)",
+      "Bash(bash -n:*)",
+      "Bash(bats:*)",
+      "Bash(terraform init)",
+      "Bash(terraform init:*)",
+      "Bash(terraform validate)",
+      "Bash(terraform validate:*)",
+      "Bash(terraform plan:*)",
+      "Bash(terraform fmt:*)",
+      "Bash(terraform workspace list)",
+      "Bash(terraform workspace show)",
+      "Bash(terraform workspace new:*)",
+      "Bash(terraform workspace select:*)",
+      "Bash(terraform output:*)"
+    ]
+  }
+}
