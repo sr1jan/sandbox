@@ -66,11 +66,12 @@ if [ ! -f /etc/devbox/secrets ]; then
   echo "  → Edit /etc/devbox/secrets with your CLI credentials"
 fi
 
-# --- Pi extensions and skills ---
-echo "[5/7] Installing Pi extensions and skills..."
-sudo -u agent mkdir -p /home/agent/.pi/agent/extensions /home/agent/.pi/agent/skills
+# --- Pi extensions, skills, and shared patterns ---
+echo "[5/7] Installing Pi extensions, skills, and patterns..."
+sudo -u agent mkdir -p /home/agent/.pi/agent/extensions /home/agent/.pi/agent/skills /home/agent/.pi/agent/patterns
 sudo cp "$SANDBOX_DIR/agents/pi/extensions/"*.ts /home/agent/.pi/agent/extensions/
 sudo cp -r "$SANDBOX_DIR/agents/pi/skills/"* /home/agent/.pi/agent/skills/
+sudo cp "$SANDBOX_DIR/shared/patterns/"*.json /home/agent/.pi/agent/patterns/
 sudo chown -R agent:agent /home/agent/.pi
 
 # --- Editor and tmux configs for agent ---
