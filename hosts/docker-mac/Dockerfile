@@ -57,10 +57,11 @@ RUN chmod 755 /usr/local/bin/run /usr/local/bin/lock-env /usr/local/bin/unlock-e
 COPY shared/sudoers.d/agent /etc/sudoers.d/agent
 RUN chmod 440 /etc/sudoers.d/agent
 
-# Pi extensions and skills (global, for agent user)
-RUN mkdir -p /home/agent/.pi/agent/extensions /home/agent/.pi/agent/skills
+# Pi extensions, skills, and shared patterns (global, for agent user)
+RUN mkdir -p /home/agent/.pi/agent/extensions /home/agent/.pi/agent/skills /home/agent/.pi/agent/patterns
 COPY agents/pi/extensions/ /home/agent/.pi/agent/extensions/
 COPY agents/pi/skills/ /home/agent/.pi/agent/skills/
+COPY shared/patterns/ /home/agent/.pi/agent/patterns/
 
 # Nvim data dirs (config is mounted ro, plugins need writable dirs)
 RUN mkdir -p /home/agent/.local/share/nvim /home/agent/.local/state/nvim /home/agent/.cache/nvim
