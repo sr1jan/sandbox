@@ -21,7 +21,7 @@ Use Tailscale for primary access, with SSM Session Manager available as a break-
 
 - VM joins a dedicated deepreel Tailscale tailnet (new, owned by `srijan@deepreel.com`, free tier sufficient)
 - Provisioning uses an ephemeral pre-authorized auth key, consumed on first use
-- Mac uses `tailscale ssh admin@dp-sandbox` for shell access
+- Mac uses `tailscale ssh ubuntu@dp-sandbox` for admin shell (sudo-capable) or `tailscale ssh agent@dp-sandbox` for the locked-down agent user
 - Phone uses the Tailscale mobile app plus any SSH client (Blink Shell on iOS, Termius cross-platform)
 - Port forwarding is native: VM services bound to `0.0.0.0:<port>` are reachable from the Mac at `http://dp-sandbox:<port>` via Tailscale MagicDNS
 - One ACL rule prevents `tag:claude-sandbox` from initiating connections toward the Mac or phone (belt-and-suspenders against lateral movement)

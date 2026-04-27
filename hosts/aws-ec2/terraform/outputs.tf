@@ -39,7 +39,8 @@ output "connection_instructions" {
   value = <<-EOT
 
     # Provisioning complete. Connect via Tailscale:
-    tailscale ssh admin@${local.tailnet_hostname}
+    tailscale ssh ubuntu@${local.tailnet_hostname}        # admin (sudo-capable)
+    tailscale ssh agent@${local.tailnet_hostname}         # locked-down agent user
 
     # Break-glass via SSM (requires attaching the SSM profile first):
     aws ec2 associate-iam-instance-profile \\

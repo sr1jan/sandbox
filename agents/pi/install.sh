@@ -41,18 +41,23 @@ fi
 
 PI_BIN="$PI_PROJECTS_DIR/pi-mono/packages/coding-agent/dist/cli/index.js"
 
-if ! sudo -u "$AGENT_USER" grep -q "alias pi=" "$AGENT_HOME/.bashrc" 2>/dev/null; then
-  echo "alias pi=\"node $PI_BIN\"" | sudo tee -a "$AGENT_HOME/.bashrc" >/dev/null
+# Install `pi` as a real binary on PATH (works in interactive AND
+# non-interactive shells). Wraps via `sudo run` so ANTHROPIC_API_KEY (and
+# any other creds) are sourced from /etc/devbox/locked/secrets at invocation
+# time — never persisted in the agent's env or .bashrc.
+sudo tee /usr/local/bin/pi >/dev/null <<EOF
+#!/bin/bash
+exec sudo /usr/local/bin/run node $PI_BIN "\$@"
+EOF
+sudo chmod 755 /usr/local/bin/pi
+
+# PATH addition for /home/agent/.local/bin (user-installed pip/cargo bins).
+# Distinct concern from the pi alias above; safe to keep.
+if ! sudo -u "$AGENT_USER" grep -q "/home/agent/.local/bin" "$AGENT_HOME/.bashrc" 2>/dev/null; then
   echo 'export PATH="/home/agent/.local/bin:$PATH"' | sudo tee -a "$AGENT_HOME/.bashrc" >/dev/null
   sudo chown "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.bashrc"
 fi
 
-# ANTHROPIC_API_KEY in agent's shell — Pi needs this to authenticate.
-# Skipped silently if the env var isn't set at install time; admin can
-# add it manually to /home/agent/.bashrc or /etc/devbox/secrets later.
-if [ -n "${ANTHROPIC_API_KEY:-}" ] && ! sudo -u "$AGENT_USER" grep -q ANTHROPIC_API_KEY "$AGENT_HOME/.bashrc" 2>/dev/null; then
-  echo "export ANTHROPIC_API_KEY=\"$ANTHROPIC_API_KEY\"" | sudo tee -a "$AGENT_HOME/.bashrc" >/dev/null
-  sudo chown "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.bashrc"
-fi
-
 echo "[pi-install] Done."
+echo "[pi-install] Pi reads ANTHROPIC_API_KEY from /etc/devbox/locked/secrets via 'sudo run'."
+echo "[pi-install] Populate it with: echo 'ANTHROPIC_API_KEY=...' | sudo sync-secrets"
