@@ -14,7 +14,8 @@ resource "tailscale_tailnet_key" "sandbox" {
   # terraform apply to get a fresh key.
   expiry = 3600
 
-  description = "Sandbox VM provisioning key — workspace ${terraform.workspace}"
+  # Tailscale API caps description at 50 chars.
+  description = "Sandbox provisioning ${terraform.workspace}"
 
   # Tag must be pre-created in the tailnet ACL (tailnet admin console).
   tags = [var.tailscale_tag]

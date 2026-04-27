@@ -1,18 +1,22 @@
-# CloudWatch readonly IAM user (NOT attached as an instance profile —
-# credentials go into /etc/devbox/secrets as AWS_ACCESS_KEY_ID /
-# AWS_SECRET_ACCESS_KEY, consumed by `sudo run aws logs ...`).
+# Sandbox IAM identity — one IAM user per sandbox VM. Holds whatever
+# read-only AWS capabilities the sandbox needs (today: CloudWatch logs;
+# add more attached policies as needs emerge — S3, SQS, Secrets Manager).
 #
-# ADR 0002 constraint 3: hand-written policy only, no managed
+# Credentials are NOT attached as an instance profile. They go into
+# /etc/devbox/secrets as AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY,
+# consumed by `sudo run aws ...`.
+#
+# ADR 0002 constraint 3: hand-written policies only, no managed
 # ReadOnlyAccess (which grants far more than the name implies).
 
-resource "aws_iam_user" "cloudwatch_reader" {
-  name = "sandbox-cloudwatch-reader-${terraform.workspace}"
+resource "aws_iam_user" "sandbox" {
+  name = "sandbox-${terraform.workspace}"
   path = "/sandbox/"
 
-  tags = { Purpose = "CloudWatch read-only access from sandbox VM" }
+  tags = { Purpose = "Sandbox VM AWS identity (read-only)" }
 }
 
-data "aws_iam_policy_document" "cloudwatch_reader" {
+data "aws_iam_policy_document" "sandbox" {
   statement {
     sid    = "ReadLogs"
     effect = "Allow"
@@ -49,14 +53,14 @@ data "aws_iam_policy_document" "cloudwatch_reader" {
   }
 }
 
-resource "aws_iam_user_policy" "cloudwatch_reader" {
+resource "aws_iam_user_policy" "sandbox" {
   name   = "cloudwatch-readonly"
-  user   = aws_iam_user.cloudwatch_reader.name
-  policy = data.aws_iam_policy_document.cloudwatch_reader.json
+  user   = aws_iam_user.sandbox.name
+  policy = data.aws_iam_policy_document.sandbox.json
 }
 
-resource "aws_iam_access_key" "cloudwatch_reader" {
-  user = aws_iam_user.cloudwatch_reader.name
+resource "aws_iam_access_key" "sandbox" {
+  user = aws_iam_user.sandbox.name
 }
 
 # ---- SSM break-glass instance profile ----

@@ -19,14 +19,14 @@ output "vpc_id" {
 }
 
 output "iam_user_access_key_id" {
-  value       = aws_iam_access_key.cloudwatch_reader.id
-  description = "AWS_ACCESS_KEY_ID for the CloudWatch readonly IAM user — place in workspace .secrets.env"
+  value       = aws_iam_access_key.sandbox.id
+  description = "AWS_ACCESS_KEY_ID for the sandbox IAM user — place in /etc/devbox/secrets on the VM"
   sensitive   = true
 }
 
 output "iam_user_secret_access_key" {
-  value       = aws_iam_access_key.cloudwatch_reader.secret
-  description = "AWS_SECRET_ACCESS_KEY for the CloudWatch readonly IAM user"
+  value       = aws_iam_access_key.sandbox.secret
+  description = "AWS_SECRET_ACCESS_KEY for the sandbox IAM user"
   sensitive   = true
 }
 
