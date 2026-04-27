@@ -60,24 +60,26 @@ fi
 echo "[3/6] Installing scripts..."
 SANDBOX_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
-sudo cp "$SANDBOX_DIR/shared/scripts/run" /usr/local/bin/run
-sudo cp "$SANDBOX_DIR/shared/scripts/lock-env" /usr/local/bin/lock-env
-sudo cp "$SANDBOX_DIR/shared/scripts/unlock-env" /usr/local/bin/unlock-env
-sudo chmod 755 /usr/local/bin/run /usr/local/bin/lock-env /usr/local/bin/unlock-env
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/run"          /usr/local/bin/run
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/lock-env"     /usr/local/bin/lock-env
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/unlock-env"   /usr/local/bin/unlock-env
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/sync-secrets" /usr/local/bin/sync-secrets
 
 sudo cp "$SANDBOX_DIR/shared/sudoers.d/agent" /etc/sudoers.d/agent
 sudo chmod 440 /etc/sudoers.d/agent
 
 # --- Secrets directory ---
+# Canonical paths: shared/scripts/run reads /etc/devbox/locked/secrets and
+# /etc/devbox/locked/projects/<proj>/.env*. Both dirs are root:700.
 echo "[4/6] Setting up secrets..."
-sudo mkdir -p /etc/devbox
-sudo chown root:root /etc/devbox
-sudo chmod 700 /etc/devbox
+sudo mkdir -p /etc/devbox/locked
+sudo chown -R root:root /etc/devbox
+sudo chmod 700 /etc/devbox /etc/devbox/locked
 
-if [ ! -f /etc/devbox/secrets ]; then
-  sudo cp "$SANDBOX_DIR/hosts/docker-mac/secrets.example" /etc/devbox/secrets
-  sudo chmod 600 /etc/devbox/secrets
-  echo "  → Edit /etc/devbox/secrets with your CLI credentials"
+if [ ! -f /etc/devbox/locked/secrets ]; then
+  sudo cp "$SANDBOX_DIR/shared/secrets.example" /etc/devbox/locked/secrets
+  sudo chmod 600 /etc/devbox/locked/secrets
+  echo "  → Edit /etc/devbox/locked/secrets with your CLI credentials (sudo sync-secrets is the recommended path)"
 fi
 
 # --- Editor and tmux configs for agent (shared across agents) ---
