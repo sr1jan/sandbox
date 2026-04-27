@@ -97,3 +97,70 @@ variable "skills_source_path" {
   type        = string
   default     = ""
 }
+
+# ---- Sandbox repo (clone source for bootstrap) ----
+
+variable "sandbox_repo_url" {
+  description = "HTTPS URL of the sandbox repo to clone on the VM at bootstrap time."
+  type        = string
+  default     = "https://github.com/sr1jan/sandbox.git"
+}
+
+variable "sandbox_repo_ref" {
+  description = "Git ref (branch/tag/sha) to clone. Set to a feature branch when iterating; flip to main once merged."
+  type        = string
+  default     = "main"
+}
+
+# ---- Operator-supplied secrets (passed via user-data → bootstrap → /etc/devbox/locked/secrets) ----
+# All sensitive. Provide via TF_VAR_* in workspaces/<name>.secrets.env (gitignored).
+# These land on the VM in the global secrets file, sourced by `sudo run`.
+
+variable "gh_token_deepreel" {
+  description = "GitHub PAT scoped to deepreel/* private repos (read). Used by bootstrap for repo clone and by agent runtime via gh CLI. Empty string disables private-repo clone."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "gh_token_sandbox" {
+  description = "Optional GitHub PAT for sr1jan/sandbox (e.g. agent self-modifies infra). Not required for v1 since sandbox repo is public."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "anthropic_api_key" {
+  description = "Anthropic API key. Optional — Claude Code can device-flow login on first run if empty."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_replica_host" {
+  description = "Prod read-replica DB host. Required only if prod_replica_endpoint is set."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_replica_name" {
+  description = "Prod read-replica DB name."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_replica_user" {
+  description = "Prod read-replica DB user (read-only role)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_replica_password" {
+  description = "Prod read-replica DB password."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

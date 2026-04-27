@@ -2,11 +2,21 @@
 # Sandbox EC2 bootstrap — runs as root on first boot via user-data.
 #
 # Interpolated by Terraform with:
-#   ${tailscale_auth_key}   pre-authorized single-use key
-#   ${tailnet_hostname}     base tailnet hostname (no FQDN suffix)
-#   ${deepreel_repo_urls}   JSON array of git URLs to clone into /workspace/core/
-#   ${skills_source_path}   absolute path on the VM (empty string = no symlinks)
-#   ${workspace_name}       Terraform workspace name (e.g., deepreel-srijan-claude)
+#   ${tailscale_auth_key}        pre-authorized single-use key
+#   ${tailnet_hostname}          base tailnet hostname (no FQDN suffix)
+#   ${sandbox_repo_url}          HTTPS URL for sandbox repo to clone
+#   ${sandbox_repo_ref}          git ref to clone (branch/tag/sha)
+#   ${deepreel_repo_urls}        JSON array of "owner/name" pairs (or full URLs)
+#   ${skills_source_path}        absolute path on the VM (empty string = no symlinks)
+#   ${workspace_name}            Terraform workspace name
+#
+# Secrets (also templated; written to /etc/devbox/locked/secrets via
+# sync-secrets, NEVER echoed to the bootstrap log):
+#   ${aws_access_key_id} ${aws_secret_access_key} ${aws_default_region}
+#   ${gh_token_deepreel} ${gh_token_sandbox}
+#   ${anthropic_api_key}
+#   ${database_replica_host} ${database_replica_name}
+#   ${database_replica_user} ${database_replica_password}
 
 set -euo pipefail
 exec > >(tee -a /var/log/sandbox-bootstrap.log) 2>&1
@@ -58,6 +68,18 @@ if ! command -v aws &>/dev/null; then
   cd -
 fi
 
+# GitHub CLI (gh) — used by bootstrap to clone private deepreel repos and
+# at runtime by the agent (`sudo run gh repo clone deepreel/foo`).
+if ! command -v gh &>/dev/null; then
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg status=none
+  chmod 644 /usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    > /etc/apt/sources.list.d/github-cli.list
+  apt-get update
+  apt-get install -y --no-install-recommends gh
+fi
+
 # --- Users ---
 echo "[bootstrap] Creating users..."
 if ! id agent &>/dev/null; then
@@ -84,10 +106,11 @@ echo "[bootstrap] Disabling standard sshd (access via tailscale ssh only)..."
 systemctl disable --now ssh || true
 systemctl mask ssh || true
 
-# --- Sandbox repo (pulled fresh; not a git clone of the user's local work) ---
+# --- Sandbox repo (clone the configured branch — defaults to main) ---
 SANDBOX_DIR=/opt/sandbox
 if [ ! -d "$SANDBOX_DIR" ]; then
-  git clone https://github.com/sr1jan/sandbox.git "$SANDBOX_DIR"
+  git clone --branch '${sandbox_repo_ref}' --depth 1 \
+    '${sandbox_repo_url}' "$SANDBOX_DIR"
 fi
 
 # --- Shared scripts + sudoers + patterns ---
@@ -105,6 +128,27 @@ mkdir -p /etc/devbox/locked
 chmod 700 /etc/devbox /etc/devbox/locked
 touch /etc/devbox/locked/secrets
 chmod 600 /etc/devbox/locked/secrets
+
+# --- Inject operator-supplied secrets via sync-secrets ---
+# Heredoc body is single-quote-delimited so bash never expands $ or `…` in
+# the values; sync-secrets reads each KEY=value line, single-quotes the
+# value, atomically writes to /etc/devbox/locked/secrets. Empty values are
+# skipped, so optional secrets (gh_token_sandbox, anthropic_api_key, etc.)
+# don't pollute the file when unset. Output goes nowhere — no values touch
+# /var/log/sandbox-bootstrap.log.
+echo "[bootstrap] Writing secrets to /etc/devbox/locked/secrets..."
+/usr/local/bin/sync-secrets >/dev/null 2>&1 <<'__SANDBOX_SECRETS_EOF__'
+AWS_ACCESS_KEY_ID=${aws_access_key_id}
+AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
+AWS_DEFAULT_REGION=${aws_default_region}
+GH_TOKEN_DEEPREEL=${gh_token_deepreel}
+GH_TOKEN_SANDBOX=${gh_token_sandbox}
+ANTHROPIC_API_KEY=${anthropic_api_key}
+DATABASE_REPLICA_HOST=${database_replica_host}
+DATABASE_REPLICA_NAME=${database_replica_name}
+DATABASE_REPLICA_USER=${database_replica_user}
+DATABASE_REPLICA_PASSWORD=${database_replica_password}
+__SANDBOX_SECRETS_EOF__
 
 # --- Egress allowlist at the host level (iptables) ---
 echo "[bootstrap] Applying host-level iptables egress rules..."
@@ -133,16 +177,37 @@ install -m 644 -o agent -g agent \
   "$SANDBOX_DIR/shared/tmuxinator/dev.yml" \
   /home/agent/.config/tmuxinator/dev.yml
 
+# --- Set up gh CLI auth for the agent (one-time, persists in ~/.config/gh) ---
+# Reads token from the secrets file we just wrote. Subsequent `sudo run gh ...`
+# calls work without env vars because gh stored creds in agent's home.
+if grep -q '^export GH_TOKEN_DEEPREEL=' /etc/devbox/locked/secrets 2>/dev/null; then
+  echo "[bootstrap] Configuring gh CLI auth for agent..."
+  # Source secrets in a subshell so the value never lands in our env or log.
+  ( set -a; . /etc/devbox/locked/secrets; set +a
+    if [ -n "$${GH_TOKEN_DEEPREEL:-}" ]; then
+      echo "$${GH_TOKEN_DEEPREEL}" \
+        | sudo -u agent gh auth login --with-token --hostname github.com --git-protocol https >/dev/null 2>&1
+    fi
+  )
+fi
+
 # --- Clone deepreel repos into /workspace/core/ ---
+# Accepts either "owner/name" form (preferred — gh repo clone) or full https URL.
 echo "[bootstrap] Cloning deepreel repos into /workspace/core/..."
 mkdir -p /workspace/core
 chown agent:agent /workspace/core
 echo '${deepreel_repo_urls}' | jq -r '.[]' | while read -r repo; do
   [ -z "$repo" ] && continue
-  repo_name="$(basename "$repo" .git)"
+  case "$repo" in
+    https://github.com/*)
+      ownername="$(echo "$repo" | sed -E 's|^https://github.com/||;s|\.git$||')" ;;
+    *)
+      ownername="$repo" ;;  # already owner/name
+  esac
+  repo_name="$(basename "$ownername")"
   if [ ! -d "/workspace/core/$repo_name" ]; then
-    sudo -u agent git clone "$repo" "/workspace/core/$repo_name" || \
-      echo "Warning: failed to clone $repo — likely needs GH_TOKEN in /etc/devbox/secrets first"
+    sudo -u agent gh repo clone "$ownername" "/workspace/core/$repo_name" \
+      || echo "Warning: failed to clone $ownername (token may lack access or repo doesn't exist)"
   fi
 done
 
