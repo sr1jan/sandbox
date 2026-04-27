@@ -46,6 +46,18 @@ if ! command -v tmuxinator &>/dev/null; then
   gem install tmuxinator --no-document
 fi
 
+# AWS CLI v2 (apt's awscli is v1, in maintenance mode). Used by the agent
+# via `sudo run aws ...` for IAM-scoped reads (CloudWatch logs etc.).
+if ! command -v aws &>/dev/null; then
+  ARCH=$(uname -m)   # aarch64 on t4g, x86_64 on t3
+  cd /tmp
+  curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-$ARCH.zip" -o awscliv2.zip
+  unzip -q awscliv2.zip
+  ./aws/install
+  rm -rf /tmp/aws /tmp/awscliv2.zip
+  cd -
+fi
+
 # --- Users ---
 echo "[bootstrap] Creating users..."
 if ! id agent &>/dev/null; then
@@ -80,15 +92,19 @@ fi
 
 # --- Shared scripts + sudoers + patterns ---
 echo "[bootstrap] Installing shared scripts and sudoers..."
-install -m 755 "$SANDBOX_DIR/shared/scripts/run"        /usr/local/bin/run
-install -m 755 "$SANDBOX_DIR/shared/scripts/lock-env"   /usr/local/bin/lock-env
-install -m 755 "$SANDBOX_DIR/shared/scripts/unlock-env" /usr/local/bin/unlock-env
-install -m 440 "$SANDBOX_DIR/shared/sudoers.d/agent"    /etc/sudoers.d/agent
+install -m 755 "$SANDBOX_DIR/shared/scripts/run"          /usr/local/bin/run
+install -m 755 "$SANDBOX_DIR/shared/scripts/lock-env"     /usr/local/bin/lock-env
+install -m 755 "$SANDBOX_DIR/shared/scripts/unlock-env"   /usr/local/bin/unlock-env
+install -m 755 "$SANDBOX_DIR/shared/scripts/sync-secrets" /usr/local/bin/sync-secrets
+install -m 440 "$SANDBOX_DIR/shared/sudoers.d/agent"      /etc/sudoers.d/agent
 
+# Canonical paths: shared/scripts/run reads /etc/devbox/locked/secrets and
+# /etc/devbox/locked/projects/<proj>/.env*. Both dirs are root:700 so the
+# agent user cannot enumerate or read anything inside.
 mkdir -p /etc/devbox/locked
-chmod 700 /etc/devbox
-touch /etc/devbox/secrets
-chmod 600 /etc/devbox/secrets
+chmod 700 /etc/devbox /etc/devbox/locked
+touch /etc/devbox/locked/secrets
+chmod 600 /etc/devbox/locked/secrets
 
 # --- Egress allowlist at the host level (iptables) ---
 echo "[bootstrap] Applying host-level iptables egress rules..."

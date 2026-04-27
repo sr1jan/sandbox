@@ -13,8 +13,8 @@ and [ADRs](docs/adr/) for the full architecture.
 Three OS-enforced layers + two Claude-Code/Pi-enforced layers prevent
 the agent from seeing credentials:
 
-1. **File permissions** — `/etc/devbox/secrets` and per-project locked
-   `.env` files are `root:root 600`. Agent user cannot read them.
+1. **File permissions** — `/etc/devbox/locked/secrets` and per-project
+   locked `.env` files are `root:root 600`. Agent user cannot read them.
 2. **Sudoers** — agent can only `sudo /usr/local/bin/run <cmd>`.
 3. **cred-guard hook / extension** — blocks Bash commands and file
    reads that match credential-exposure patterns.
@@ -98,7 +98,7 @@ terraform apply -var-file=../../../workspaces/deepreel-srijan-claude.tfvars
 | Use gh/aws/gcloud CLI | Yes | `sudo run gh ...` |
 | Read .env files | No | OS file perms + hook blocks |
 | Run env/printenv | No | cred-guard hook blocks |
-| Read /etc/devbox/secrets | No | root:root 600 |
+| Read /etc/devbox/locked/secrets | No | root:root 600 |
 | sudo cat/bash (as agent) | No | cred-guard + sudoers restrict |
 | sudo bash (as admin) | Yes | For credential management |
 

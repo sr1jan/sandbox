@@ -183,14 +183,15 @@ Three concurrent flows. Each invariant is load-bearing.
 ### 5.1 Flow A: Provisioning
 
 ```
-admin on Mac → scp/copy-paste → EC2 admin tmux window
-  $ sudo vi /etc/devbox/secrets            # global CLI creds
+admin on Mac → ./hosts/aws-ec2/sync-aws-keys.sh    # AWS_* from terraform
+admin on Mac → tailscale ssh ubuntu@<host>         # everything else
+  $ echo 'GH_TOKEN=...' | sudo sync-secrets        # idempotent upsert
   $ cd /workspace/core/backend
-  $ sudo vi .env                           # project creds
-  $ sudo lock-env                          # root:600 in /etc/devbox/locked/
+  $ sudo vi .env                                   # project creds
+  $ sudo lock-env                                  # root:600 in /etc/devbox/locked/
 ```
 
-**Invariant after A**: every secret is `root:600` in `/etc/devbox/` or `/etc/devbox/locked/`. `agent` cannot read any directly.
+**Invariant after A**: every secret is `root:600` under `/etc/devbox/locked/`. `agent` cannot read any directly.
 
 ### 5.2 Flow B: Claude invokes a privileged command
 
@@ -375,7 +376,7 @@ Skills know the protocol (function name `with_creds`); they do not know the impl
 - [ ] From VM: `ssh -v github.com` (port 22 out) → blocked
 
 **Credential isolation:**
-- [ ] As `agent`: `cat /etc/devbox/secrets` → permission denied
+- [ ] As `agent`: `cat /etc/devbox/locked/secrets` → permission denied
 - [ ] As `agent`: `env | grep AWS` → empty
 - [ ] Claude bash: `cat .env` → blocked with block reason
 - [ ] Claude bash: `printenv` → blocked
