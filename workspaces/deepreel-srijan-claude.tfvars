@@ -35,13 +35,18 @@ cloudwatch_log_group_arns = [
   # "arn:aws:logs:ap-south-1:<account-id>:log-group:/ecs/<backend-service>:*",
 ]
 
-# Deepreel repos to clone into /workspace/core/ during bootstrap.
-# Empty list = nothing is cloned (useful for first provisioning test).
+# Work repos → /workspace/core/. "owner/name" form, gh repo clone.
 deepreel_repo_urls = [
-  # "<org>/<repo>",
-  # "<org>/<repo>",
-  # "<org>/<repo>",
-  # "<org>/<repo>",
+  "<org>/<repo>",
+  "<org>/<repo>",
+  "<org>/<repo>",
+  "<org>/<repo>",
+]
+
+# Personal repos → /workspace/fun/. Same form. Use `tx fun` to launch
+# the personal-projects tmux layout.
+fun_repo_urls = [
+  "sr1jan/sandbox",
 ]
 
 # Path on the VM to the skills dir (one of the deepreel_repo_urls

@@ -163,6 +163,7 @@ resource "aws_instance" "sandbox" {
     tailscale_auth_key = tailscale_tailnet_key.sandbox.key
     tailnet_hostname   = local.tailnet_hostname
     deepreel_repo_urls = jsonencode(var.deepreel_repo_urls)
+    fun_repo_urls      = jsonencode(var.fun_repo_urls)
     skills_source_path = var.skills_source_path
     workspace_name     = terraform.workspace
 
