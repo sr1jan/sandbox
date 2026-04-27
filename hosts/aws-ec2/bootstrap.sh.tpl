@@ -6,7 +6,8 @@
 #   ${tailnet_hostname}          base tailnet hostname (no FQDN suffix)
 #   ${sandbox_repo_url}          HTTPS URL for sandbox repo to clone
 #   ${sandbox_repo_ref}          git ref to clone (branch/tag/sha)
-#   ${deepreel_repo_urls}        JSON array of "owner/name" pairs (or full URLs)
+#   ${deepreel_repo_urls}        JSON array of work repos → /workspace/core/
+#   ${fun_repo_urls}             JSON array of personal repos → /workspace/fun/
 #   ${skills_source_path}        absolute path on the VM (empty string = no symlinks)
 #   ${workspace_name}            Terraform workspace name
 #
@@ -198,25 +199,35 @@ if grep -q '^export GH_TOKEN_DEEPREEL=' /etc/devbox/locked/secrets 2>/dev/null; 
   )
 fi
 
-# --- Clone deepreel repos into /workspace/core/ ---
-# Accepts either "owner/name" form (preferred — gh repo clone) or full https URL.
-echo "[bootstrap] Cloning deepreel repos into /workspace/core/..."
-mkdir -p /workspace/core
-chown agent:agent /workspace/core
-echo '${deepreel_repo_urls}' | jq -r '.[]' | while read -r repo; do
-  [ -z "$repo" ] && continue
-  case "$repo" in
-    https://github.com/*)
-      ownername="$(echo "$repo" | sed -E 's|^https://github.com/||;s|\.git$||')" ;;
-    *)
-      ownername="$repo" ;;  # already owner/name
-  esac
-  repo_name="$(basename "$ownername")"
-  if [ ! -d "/workspace/core/$repo_name" ]; then
-    sudo -u agent gh repo clone "$ownername" "/workspace/core/$repo_name" \
-      || echo "Warning: failed to clone $ownername (token may lack access or repo doesn't exist)"
-  fi
-done
+# --- Clone work repos (deepreel) into /workspace/core/ ---
+# --- Clone personal repos (fun) into /workspace/fun/ ---
+# Both lists accept either "owner/name" (preferred) or full https URL.
+clone_repos_into() {
+  local target_root="$1"
+  local repo_json="$2"
+  mkdir -p "$target_root"
+  chown agent:agent "$target_root"
+  echo "$repo_json" | jq -r '.[]' | while read -r repo; do
+    [ -z "$repo" ] && continue
+    case "$repo" in
+      https://github.com/*)
+        ownername="$(echo "$repo" | sed -E 's|^https://github.com/||;s|\.git$||')" ;;
+      *)
+        ownername="$repo" ;;  # already owner/name
+    esac
+    repo_name="$(basename "$ownername")"
+    if [ ! -d "$target_root/$repo_name" ]; then
+      sudo -u agent gh repo clone "$ownername" "$target_root/$repo_name" \
+        || echo "Warning: failed to clone $ownername into $target_root (token may lack access or repo doesn't exist)"
+    fi
+  done
+}
+
+echo "[bootstrap] Cloning work repos into /workspace/core/..."
+clone_repos_into /workspace/core '${deepreel_repo_urls}'
+
+echo "[bootstrap] Cloning personal repos into /workspace/fun/..."
+clone_repos_into /workspace/fun '${fun_repo_urls}'
 
 echo "=== Sandbox bootstrap complete: $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
 echo "Connect: tailscale ssh ubuntu@${tailnet_hostname}"

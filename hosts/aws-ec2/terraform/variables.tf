@@ -81,7 +81,13 @@ variable "enable_ssm_break_glass" {
 }
 
 variable "deepreel_repo_urls" {
-  description = "List of git URLs to clone into /workspace/core/ during bootstrap"
+  description = "Work repos to clone into /workspace/core/ during bootstrap. Use 'owner/name' form (preferred — uses gh repo clone). GH_TOKEN_DEEPREEL must have read access."
+  type        = list(string)
+  default     = []
+}
+
+variable "fun_repo_urls" {
+  description = "Personal repos to clone into /workspace/fun/ during bootstrap. Same form as deepreel_repo_urls. Public repos clone unauthenticated; private ones need the same GH_TOKEN_DEEPREEL (or an extended token) with access to the owner."
   type        = list(string)
   default     = []
 }
