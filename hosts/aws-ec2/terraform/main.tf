@@ -162,6 +162,24 @@ resource "aws_instance" "sandbox" {
     deepreel_repo_urls = jsonencode(var.deepreel_repo_urls)
     skills_source_path = var.skills_source_path
     workspace_name     = terraform.workspace
+
+    # Sandbox repo source — bootstrap clones this branch
+    sandbox_repo_url = var.sandbox_repo_url
+    sandbox_repo_ref = var.sandbox_repo_ref
+
+    # Operator-supplied secrets (sensitive — also embedded in EC2 user-data
+    # metadata, accessible only to principals with ec2:DescribeInstanceAttribute
+    # in this account)
+    aws_access_key_id         = aws_iam_access_key.sandbox.id
+    aws_secret_access_key     = aws_iam_access_key.sandbox.secret
+    aws_default_region        = var.aws_region
+    gh_token_deepreel         = var.gh_token_deepreel
+    gh_token_sandbox          = var.gh_token_sandbox
+    anthropic_api_key         = var.anthropic_api_key
+    database_replica_host     = var.database_replica_host
+    database_replica_name     = var.database_replica_name
+    database_replica_user     = var.database_replica_user
+    database_replica_password = var.database_replica_password
   })
 
   # Force replacement on user-data change so a re-apply re-bootstraps cleanly.
