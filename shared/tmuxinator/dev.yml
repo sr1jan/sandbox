@@ -1,23 +1,27 @@
 ---
-# Runs INSIDE the container/VM. Single tmux layer.
-# tmux runs as agent user (so Pi's tmux-tools extension works).
-# Admin window uses sudo bash for root access.
-# Started via: tmuxinator start dev
+# Runs INSIDE the sandbox VM. Single tmux layer.
+# tmux runs as the agent user (so the cred-guard hooks fire on Bash tool
+# calls). New windows you create with Ctrl-b c also inherit the agent
+# user. The "admin" window opens with `sudo -i` to elevate to root for
+# credential management.
+#
+# Start with:
+#   sudo -u agent -i
+#   tmuxinator start dev
 
 name: dev
-root: /workspace
+root: /workspace/core
 
-startup_window: AISpotlight
+startup_window: backend
 
 windows:
-  # Root shell via sudo — credential management
+  # Root shell — credential management (sudo sync-secrets, sudo vi /etc/devbox/locked/secrets, etc.)
   - admin:
       panes:
-        - sudo bash
+        - sudo -i
 
-  # Pi agent windows
-  - AISpotlight:
-      root: /workspace/AISpotlight
+  # Claude Code on the backend repo
+  - backend:
+      root: /workspace/core/backend
       panes:
-        - pi
-        - ""
+        - claude
