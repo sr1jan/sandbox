@@ -1,0 +1,16 @@
+#!/bin/bash
+# with_creds — wrap any command in a credentialed run via `sudo run`.
+#
+# Lives at /usr/local/bin/with_creds on the sandbox VM. Exists as a real
+# binary (not just a shell function) so it works in every shell context
+# Claude can invoke: interactive, non-interactive, login, non-login.
+#
+# Skills call `with_creds <cmd>` to invoke commands that need locked
+# secrets (gh/aws/psql/etc.). On the sandbox VM this routes through
+# `sudo /usr/local/bin/run`, which sources /etc/devbox/secrets as root
+# and drops privs back to the agent user via gosu before exec.
+#
+# On Mac, /usr/local/bin/run doesn't exist; skills are expected to
+# define `with_creds` as a no-op function locally before calling it.
+
+exec sudo /usr/local/bin/run "$@"

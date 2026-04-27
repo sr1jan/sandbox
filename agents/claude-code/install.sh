@@ -53,30 +53,12 @@ sudo rm -f "$AGENT_HOME/.claude/settings.json.bak"
 
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.claude"
 
-# with_creds helper in agent's .bashrc (spec §7.2 Option 2).
-# Skills define with_creds as a no-op; the sandbox VM overrides it with
-# a function that routes through `sudo /usr/local/bin/run`, which loads
-# locked secrets and drops privs back to the agent user before exec.
-echo "[cc-install] Adding with_creds to agent's .bashrc..."
-BASHRC="$AGENT_HOME/.bashrc"
-if ! sudo grep -q "^with_creds" "$BASHRC" 2>/dev/null; then
-  sudo tee -a "$BASHRC" >/dev/null <<'EOF'
-
-# Sandbox credential wrapper (see sandbox/docs/superpowers/specs §7.2).
-# Skills call `with_creds <cmd>` to invoke privileged commands; on the
-# sandbox VM this routes through the `run` wrapper to load locked
-# secrets; on Mac `with_creds` is absent and skills default to a no-op.
-with_creds() {
-  if [ -x /usr/local/bin/run ]; then
-    sudo /usr/local/bin/run "$@"
-  else
-    "$@"
-  fi
-}
-export -f with_creds
-EOF
-  sudo chown "$AGENT_USER:$AGENT_USER" "$BASHRC"
-fi
+# Install with_creds as a system binary (works in every shell context
+# Claude can invoke — including non-interactive shells where ~/.bashrc
+# is short-circuited by Ubuntu's standard "return if non-interactive"
+# guard). See spec §7.2 Option 2.
+echo "[cc-install] Installing with_creds binary..."
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/with_creds" /usr/local/bin/with_creds
 
 # Optional skill symlinks if the workspace configured a path.
 if [ -n "${SKILLS_SOURCE_PATH:-}" ] && [ -d "$SKILLS_SOURCE_PATH" ]; then
