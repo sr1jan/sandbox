@@ -124,6 +124,7 @@ install -m 755 "$SANDBOX_DIR/shared/scripts/run"          /usr/local/bin/run
 install -m 755 "$SANDBOX_DIR/shared/scripts/lock-env"     /usr/local/bin/lock-env
 install -m 755 "$SANDBOX_DIR/shared/scripts/unlock-env"   /usr/local/bin/unlock-env
 install -m 755 "$SANDBOX_DIR/shared/scripts/sync-secrets" /usr/local/bin/sync-secrets
+install -m 755 "$SANDBOX_DIR/shared/scripts/tx"           /usr/local/bin/tx
 install -m 440 "$SANDBOX_DIR/shared/sudoers.d/agent"      /etc/sudoers.d/agent
 
 # Canonical paths: shared/scripts/run reads /etc/devbox/locked/secrets and
@@ -176,11 +177,12 @@ SANDBOX_DIR="$SANDBOX_DIR" AGENT_HOME="/home/agent" AGENT_USER="agent" \
   SKILLS_SOURCE_PATH='${skills_source_path}' \
   bash "$SANDBOX_DIR/agents/claude-code/install.sh"
 
-# --- tmuxinator config for agent ---
+# --- tmuxinator configs for agent ---
 sudo -u agent mkdir -p /home/agent/.config/tmuxinator
-install -m 644 -o agent -g agent \
-  "$SANDBOX_DIR/shared/tmuxinator/dev.yml" \
-  /home/agent/.config/tmuxinator/dev.yml
+for cfg in "$SANDBOX_DIR/shared/tmuxinator/"*.yml; do
+  install -m 644 -o agent -g agent "$cfg" \
+    "/home/agent/.config/tmuxinator/$(basename "$cfg")"
+done
 
 # --- Set up gh CLI auth for the agent (one-time, persists in ~/.config/gh) ---
 # Reads token from the secrets file we just wrote. Subsequent `sudo run gh ...`
