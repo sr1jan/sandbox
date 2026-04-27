@@ -23,7 +23,10 @@ set -euo pipefail
 : "${AGENT_USER:=agent}"
 
 echo "[cc-install] Installing Claude Code CLI..."
-sudo -u "$AGENT_USER" npm install -g @anthropic-ai/claude-code
+# Install globally (as the user running this script — typically root via the
+# host bootstrap). The CLI lands in /usr/lib/node_modules and the binary in
+# /usr/local/bin (or whatever npm prefix is), accessible to every user.
+npm install -g @anthropic-ai/claude-code
 
 echo "[cc-install] Setting up hooks, patterns, settings..."
 sudo -u "$AGENT_USER" mkdir -p \
