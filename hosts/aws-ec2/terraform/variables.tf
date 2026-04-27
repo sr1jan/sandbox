@@ -68,12 +68,6 @@ variable "allowed_egress_cidrs" {
   default     = ["0.0.0.0/0"]
 }
 
-variable "prod_replica_endpoint" {
-  description = "Prod read-replica endpoint FQDN the sandbox VM may reach on 5432. null to disable."
-  type        = string
-  default     = null
-}
-
 variable "cloudwatch_log_group_arns" {
   description = "CloudWatch log group ARNs the sandbox IAM user may read. [] = all groups."
   type        = list(string)
@@ -138,7 +132,7 @@ variable "anthropic_api_key" {
 }
 
 variable "database_replica_host" {
-  description = "Prod read-replica DB host. Required only if prod_replica_endpoint is set."
+  description = "Prod read-replica DB host. Setting this triggers the SG rule to open outbound 5432 — there's no separate flag."
   type        = string
   sensitive   = true
   default     = ""

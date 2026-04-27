@@ -23,10 +23,12 @@ tailscale_tag     = "tag:claude-sandbox"
 # tailscale_oauth_client_id and tailscale_oauth_client_secret come from
 # deepreel-srijan-claude.secrets.env (loaded via TF_VAR_ env vars).
 
-# Prod replica (already publicly accessible per spec §3). Setting this
-# opens 5432 outbound in the SG. Fill in the actual FQDN before apply.
-prod_replica_endpoint = null   # TODO: e.g. "<host>.<region>.rds.amazonaws.com"
+# Prod replica access is gated automatically: when DATABASE_REPLICA_HOST
+# is set in the workspace's .secrets.env, the SG opens outbound 5432 and
+# the deepreel-db skill can reach it. Nothing to set here.
 
+# Deepreel repos to clone into /workspace/core/ during bootstrap.
+# Use "owner/name" form (preferred — bootstrap calls `gh repo clone`).
 # CloudWatch log group ARNs the sandbox IAM user is allowed to read.
 # Empty list = scope to "*" (simplest for v1; tighten later).
 cloudwatch_log_group_arns = [
@@ -36,10 +38,10 @@ cloudwatch_log_group_arns = [
 # Deepreel repos to clone into /workspace/core/ during bootstrap.
 # Empty list = nothing is cloned (useful for first provisioning test).
 deepreel_repo_urls = [
-  # "git@github.com:deepreel/backend.git",
-  # "git@github.com:deepreel/seo-content-agent.git",
-  # "git@github.com:deepreel/frontend.git",
-  # "git@github.com:deepreel/skills.git",
+  # "deepreel/backend",
+  # "deepreel/seo-content-agent",
+  # "deepreel/frontend",
+  # "deepreel/skills",
 ]
 
 # Path on the VM to the skills dir (one of the deepreel_repo_urls
