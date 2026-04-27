@@ -1,6 +1,10 @@
 owner      = "srijan"
 aws_region = "ap-south-1"
 
+# Pin sandbox repo to the feature branch until v1 is merged. Flip back to
+# "main" (default) once feat/yolo-sandbox-v1 lands.
+sandbox_repo_ref = "feat/yolo-sandbox-v1"
+
 # Dedicated VPC (no peering to default VPC where deepreel prod lives)
 vpc_cidr    = "10.100.0.0/16"
 subnet_cidr = "10.100.1.0/24"
