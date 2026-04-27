@@ -112,6 +112,10 @@ if [ ! -d "$SANDBOX_DIR" ]; then
   git clone --branch '${sandbox_repo_ref}' --depth 1 \
     '${sandbox_repo_url}' "$SANDBOX_DIR"
 fi
+# /opt/sandbox is root-owned; mark it safe so any user can run git ops on
+# it without "fatal: detected dubious ownership" (e.g. agent inspecting
+# the source of an installed script).
+git config --system --add safe.directory "$SANDBOX_DIR"
 
 # --- Shared scripts + sudoers + patterns ---
 echo "[bootstrap] Installing shared scripts and sudoers..."
