@@ -13,7 +13,7 @@ resource "aws_iam_user" "sandbox" {
   name = "sandbox-${terraform.workspace}"
   path = "/sandbox/"
 
-  tags = { Purpose = "Sandbox VM AWS identity (read-only)" }
+  tags = { Purpose = "Sandbox VM AWS identity - read-only" }
 }
 
 data "aws_iam_policy_document" "sandbox" {
@@ -78,7 +78,7 @@ resource "aws_iam_role" "ssm_break_glass" {
     }]
   })
 
-  tags = { Purpose = "SSM break-glass (attach on demand per ADR 0003)" }
+  tags = { Purpose = "SSM break-glass - attach on demand per ADR 0003" }
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_core" {
