@@ -19,7 +19,7 @@ cd "$SCRIPT_DIR"
 
 # Check secrets
 if [ ! -f secrets ]; then
-  cp secrets.example secrets
+  cp ../../shared/secrets.example secrets
   echo "Edit hosts/docker-mac/secrets with your CLI credentials, then run again."
   exit 1
 fi
