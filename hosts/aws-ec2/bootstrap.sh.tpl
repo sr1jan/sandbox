@@ -46,6 +46,18 @@ if ! command -v docker &>/dev/null; then
   curl -fsSL https://get.docker.com | sh
 fi
 
+# docker-compose (v1) compat shim — get.docker.com only installs the v2
+# plugin (`docker compose`), but many older scripts/Makefiles invoke the
+# legacy `docker-compose` binary. v2 is command-compatible, so a shim is
+# enough.
+if ! command -v docker-compose &>/dev/null; then
+  cat > /usr/local/bin/docker-compose <<'SHIM'
+#!/bin/bash
+exec docker compose "$@"
+SHIM
+  chmod 755 /usr/local/bin/docker-compose
+fi
+
 # uv
 if ! command -v uv &>/dev/null; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
