@@ -28,9 +28,10 @@ echo "[bootstrap] Installing packages..."
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   git curl wget tmux neovim ripgrep fd-find fzf \
-  sudo gosu less jq unzip jo \
+  sudo gosu less jq unzip jo netcat-openbsd \
   python3 python3-venv build-essential \
   openssh-client ca-certificates iptables iptables-persistent \
+  postgresql-client \
   ruby-full
 
 # Node.js 22
