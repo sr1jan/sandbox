@@ -109,8 +109,11 @@ resource "aws_security_group" "sandbox" {
     cidr_blocks = var.allowed_egress_cidrs
   }
 
+  # Open 5432 outbound only when the operator has actually populated
+  # DATABASE_REPLICA_HOST in workspaces/<ws>.secrets.env. Avoids needing
+  # to set the same FQDN in two places (tfvars + secrets.env).
   dynamic "egress" {
-    for_each = var.prod_replica_endpoint != null ? [1] : []
+    for_each = var.database_replica_host != "" ? [1] : []
     content {
       description = "Prod Postgres replica"
       from_port   = 5432

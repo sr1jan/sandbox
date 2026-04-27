@@ -33,10 +33,12 @@ Examples: `deepreel-srijan-claude`, `personal-srijan-pi`,
 
 2. Edit `my-workspace.tfvars`: change `owner`, `vpc_cidr` (must not
    overlap with other workspaces' VPCs if they need to coexist),
-   `tailscale_tailnet`, `prod_replica_endpoint`, etc.
+   `tailscale_tailnet`, `deepreel_repo_urls`, etc.
 
 3. Edit `my-workspace.secrets.env`: fill in the real Tailscale OAuth
-   credentials.
+   credentials, GitHub token (for private repo clones), Anthropic API
+   key, and DB replica creds. Setting `TF_VAR_database_replica_host`
+   automatically opens outbound 5432 in the SG.
 
 4. Create the Terraform workspace and apply:
    ```bash
