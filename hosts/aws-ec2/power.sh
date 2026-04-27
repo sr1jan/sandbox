@@ -7,6 +7,11 @@
 #   ./power.sh status
 #   ./power.sh stop           # stop EC2 (compute $0/hr, EBS still bills)
 #   ./power.sh start          # start EC2 (Tailscale auto-reconnects)
+#   ./power.sh sync           # reconcile box without replacing it:
+#                             #  - git pull /opt/sandbox (latest scripts)
+#                             #  - reinstall scripts + tmuxinator configs
+#                             #  - clone any tfvars repos missing from
+#                             #    /workspace/{core,fun}/
 #
 # Cost note: stopping saves the EC2 hourly rate (~$0.045/hr for t4g.large)
 # but EBS keeps billing (~$3.65/mo for 40GB gp3) and the public IPv4
@@ -53,8 +58,56 @@ case "$ACTION" in
       --instance-ids "$INSTANCE_ID" --region "$REGION" --output table \
       --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,LaunchTime,PrivateIpAddress]'
     ;;
+  sync)
+    echo "[power] Pulling latest /opt/sandbox..."
+    tailscale ssh "ubuntu@$HOSTNAME" 'cd /opt/sandbox && sudo git pull --ff-only 2>&1 | tail -3'
+
+    echo "[power] Re-installing shared scripts + tmuxinator configs..."
+    tailscale ssh "ubuntu@$HOSTNAME" '
+      set -e
+      for s in run lock-env unlock-env sync-secrets with_creds tx; do
+        sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
+      done
+      sudo -u agent mkdir -p /home/agent/.config/tmuxinator
+      for cfg in /opt/sandbox/shared/tmuxinator/*.yml; do
+        sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
+      done
+    '
+
+    echo "[power] Cloning any missing repos from current tfvars..."
+    CORE_REPOS="$(cd "$TF_DIR" && terraform output -json deepreel_repo_urls | jq -r '.[]')"
+    FUN_REPOS="$(cd "$TF_DIR" && terraform output -json fun_repo_urls | jq -r '.[]')"
+    {
+      printf 'CORE %s\n' $CORE_REPOS
+      printf 'FUN %s\n' $FUN_REPOS
+    } | tailscale ssh "ubuntu@$HOSTNAME" '
+      while read -r bucket repo; do
+        [ -z "$repo" ] && continue
+        case "$bucket" in
+          CORE) target=/workspace/core ;;
+          FUN)  target=/workspace/fun ;;
+        esac
+        case "$repo" in
+          https://github.com/*)
+            ownername="$(echo "$repo" | sed -E "s|^https://github.com/||;s|\.git$||")" ;;
+          *)
+            ownername="$repo" ;;
+        esac
+        repo_name="$(basename "$ownername")"
+        if [ ! -d "$target/$repo_name" ]; then
+          echo "  cloning $ownername → $target/$repo_name"
+          sudo mkdir -p "$target" && sudo chown agent:agent "$target"
+          sudo -u agent gh repo clone "$ownername" "$target/$repo_name" \
+            || echo "  warning: failed to clone $ownername (token may lack access)"
+        else
+          echo "  skip $ownername (already cloned)"
+        fi
+      done
+    '
+    echo "[power] Sync complete."
+    ;;
   *)
-    echo "Usage: $0 {start|stop|status}" >&2
+    echo "Usage: $0 {start|stop|status|sync}" >&2
     exit 1
     ;;
 esac

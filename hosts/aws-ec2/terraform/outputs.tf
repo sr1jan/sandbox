@@ -30,6 +30,16 @@ output "iam_user_secret_access_key" {
   sensitive   = true
 }
 
+output "deepreel_repo_urls" {
+  value       = var.deepreel_repo_urls
+  description = "Echo of work repos (for power.sh sync to read without parsing tfvars)"
+}
+
+output "fun_repo_urls" {
+  value       = var.fun_repo_urls
+  description = "Echo of personal repos (for power.sh sync to read without parsing tfvars)"
+}
+
 output "ssm_break_glass_profile_name" {
   value       = aws_iam_instance_profile.ssm_break_glass.name
   description = "Name of the SSM-only instance profile to attach on demand for break-glass"
