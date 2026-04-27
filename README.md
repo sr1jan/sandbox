@@ -89,16 +89,16 @@ in `deepreel_repo_urls` (→ `/workspace/core/`) and `fun_repo_urls` (→
 | `sudo sync-secrets` | Idempotent upsert into `/etc/devbox/locked/secrets` |
 | `sudo run <cmd>` | Invoke `<cmd>` with secrets sourced, as agent |
 
-**From your Mac**:
+**From your Mac** (all scripts under `hosts/aws-ec2/`):
 
 | | |
 |---|---|
-| `./hosts/aws-ec2/connect.sh` | SSH (defaults to ubuntu) |
-| `./hosts/aws-ec2/power.sh status` | Running / stopped |
-| `./hosts/aws-ec2/power.sh stop` | Stop EC2 (compute = $0/hr; EBS still bills) |
-| `./hosts/aws-ec2/power.sh start` | Start EC2 (Tailscale auto-reconnects) |
-| `./hosts/aws-ec2/power.sh sync` | Reconcile box without replacing it (clone new repos in tfvars, refresh scripts) |
-| `./hosts/aws-ec2/sync-aws-keys.sh` | Re-inject AWS_* if rotated, no apply |
+| `./connect.sh` | SSH (defaults to ubuntu; `--user agent` for the locked-down user) |
+| `./power.sh status\|start\|stop` | Lifecycle (stop = compute $0/hr; EBS + EIP still bill) |
+| `./power.sh sync` | Reconcile running box (git pull /opt/sandbox, reinstall scripts, clone any new repos in tfvars) |
+| `./sync-aws-keys.sh` | Re-inject AWS_* on rotation, no terraform apply |
+| `./sync-project-env.sh <local-dir> <vm-target> [files...]` | Ship `.env*` from a local project dir to `/etc/devbox/locked/projects/<vm-target>/` (root:600). E.g. `… ~/work/deepreel/core/backend core/backend` |
+| `./seed-from-dump.sh <dump> <db>` | `pg_restore` a custom-format dump into the sandbox `dp-pg` container, idempotent (`--clean --if-exists`) |
 
 ## What the agent can / can't do
 
