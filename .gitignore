@@ -15,3 +15,6 @@ hosts/*/terraform/*.tfvars   # workspace tfvars live in workspaces/, not here
 
 # macOS cruft
 .DS_Store
+
+# Tool caches
+.cachebro/
