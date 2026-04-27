@@ -61,7 +61,7 @@ resource "aws_route_table_association" "sandbox_public" {
 # ---- Security group: inbound deny-all, outbound allowlisted per ADR 0004 ----
 resource "aws_security_group" "sandbox" {
   name        = "sandbox-sg-${terraform.workspace}"
-  description = "Sandbox VM: no inbound, HTTPS/DNS/specific outbound only"
+  description = "Sandbox VM: no inbound, HTTP/HTTPS/DNS/specific outbound only"
   vpc_id      = aws_vpc.sandbox.id
 
   # Inbound: none (default deny)
@@ -70,6 +70,17 @@ resource "aws_security_group" "sandbox" {
     description = "HTTPS out (broad, per ADR 0004)"
     from_port   = 443
     to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_egress_cidrs
+  }
+
+  egress {
+    # Ubuntu APT mirrors are HTTP-only; needed for apt-get during bootstrap
+    # and any future apt-get update/upgrade. Package signatures are still
+    # GPG-verified, so HTTP doesn't weaken integrity.
+    description = "HTTP out (Ubuntu APT mirrors)"
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = var.allowed_egress_cidrs
   }
