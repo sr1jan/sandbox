@@ -287,8 +287,8 @@ Bootstrap clones each deepreel service repo individually into `/workspace/core/<
 
 ```bash
 # From Mac or phone:
-$ tailscale ssh admin@dp-sandbox
-admin@dp-sandbox:~$ tmuxinator start dev
+$ tailscale ssh ubuntu@dp-sandbox
+ubuntu@dp-sandbox:~$ tmuxinator start dev
 
 # Inside tmux, admin window:
 $ cd /workspace/core/backend
@@ -403,7 +403,7 @@ Skills know the protocol (function name `with_creds`); they do not know the impl
 - [ ] `sudo run psql "$PROD_REPLICA_URL" -c "INSERT..."` → permission denied
 
 **Access:**
-- [ ] `tailscale ssh admin@dp-sandbox` from Mac → shell
+- [ ] `tailscale ssh ubuntu@dp-sandbox` from Mac → shell
 - [ ] Blink Shell on phone → shell
 - [ ] `http://dp-sandbox:<port>` in Mac browser → loads dev server
 - [ ] `aws ssm start-session --target <id>` → shell (break-glass)

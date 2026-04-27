@@ -212,4 +212,4 @@ echo '${deepreel_repo_urls}' | jq -r '.[]' | while read -r repo; do
 done
 
 echo "=== Sandbox bootstrap complete: $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
-echo "Connect: tailscale ssh admin@${tailnet_hostname}"
+echo "Connect: tailscale ssh ubuntu@${tailnet_hostname}"
