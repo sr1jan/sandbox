@@ -1,0 +1,21 @@
+#!/bin/bash
+# tx — launch a tmuxinator project as the agent user, regardless of who
+# you are. Forgetting `sudo -u agent -i` would normally start tmux as
+# ubuntu — and any `claude` started in that session would bypass the
+# cred-guard hooks (which live in /home/agent/.claude/, not ubuntu's
+# home). tx removes the footgun: always agent, every time.
+#
+# Usage:
+#   tx                # tmuxinator start dev (default)
+#   tx fun            # tmuxinator start fun
+#   tx <project>      # any tmuxinator project under ~agent/.config/tmuxinator/
+
+set -euo pipefail
+
+NAME="${1:-dev}"
+
+if [ "$(id -un)" = "agent" ]; then
+  exec tmuxinator start "$NAME"
+else
+  exec sudo -u agent -i tmuxinator start "$NAME"
+fi

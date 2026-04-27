@@ -1,0 +1,27 @@
+---
+# Sandbox infra work. Same pattern as dev.yml — admin window for
+# credential / system management, sandbox window for editing the
+# infra itself.
+#
+# Assumes you have a working clone of sandbox at /workspace/core/sandbox
+# (add "sr1jan/sandbox" to deepreel_repo_urls in tfvars OR
+# `gh repo clone sr1jan/sandbox /workspace/core/sandbox` from agent).
+#
+# Start with:  tx fun
+
+name: fun
+root: /workspace/core
+
+startup_window: sandbox
+
+windows:
+  # Root shell — credential mgmt (sudo sync-secrets, etc.)
+  - admin:
+      panes:
+        - sudo -i
+
+  # Claude Code on the sandbox infra repo
+  - sandbox:
+      root: /workspace/core/sandbox
+      panes:
+        - claude
