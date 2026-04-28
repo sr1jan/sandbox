@@ -197,6 +197,12 @@ for cfg in "$SANDBOX_DIR/shared/tmuxinator/"*.yml; do
     "/home/agent/.config/tmuxinator/$(basename "$cfg")"
 done
 
+# --- tmux dotfiles for agent (Oh My Tmux: framework + local overrides) ---
+for f in .tmux.conf .tmux.conf.local; do
+  install -m 644 -o agent -g agent \
+    "$SANDBOX_DIR/shared/dotfiles/tmux/$f" "/home/agent/$f"
+done
+
 # --- Set up gh CLI auth for the agent (one-time, persists in ~/.config/gh) ---
 # Reads token from the secrets file we just wrote. Subsequent `sudo run gh ...`
 # calls work without env vars because gh stored creds in agent's home.
