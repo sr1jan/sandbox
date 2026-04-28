@@ -14,8 +14,20 @@ set -euo pipefail
 
 NAME="${1:-dev}"
 
-if [ "$(id -un)" = "agent" ]; then
-  exec tmuxinator start "$NAME"
-else
-  exec sudo -u agent -i tmuxinator start "$NAME"
+# Re-enter as agent if invoked by another user. Recurses into tx (not
+# straight to tmuxinator) so the inside-tmux check below still fires.
+if [ "$(id -un)" != "agent" ]; then
+  exec sudo -u agent -i tx "$NAME"
 fi
+
+# Inside an existing agent tmux: don't let tmuxinator attach a second
+# client (that nests the new session inside the current pane and leaves
+# the old one attached too). Build detached, then switch the current
+# client over.
+if [ -n "${TMUX:-}" ]; then
+  tmux has-session -t "$NAME" 2>/dev/null \
+    || tmuxinator start "$NAME" --no-attach
+  exec tmux switch-client -t "$NAME"
+fi
+
+exec tmuxinator start "$NAME"
