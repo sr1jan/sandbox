@@ -106,7 +106,7 @@ shipped your keypairs — otherwise step 3's `power.sh sync` retries them.
 |---|---|
 | `./connect.sh` | SSH (defaults to ubuntu; `--user agent` for the locked-down user) |
 | `./power.sh status\|start\|stop` | Lifecycle (stop = compute $0/hr; EBS + EIP still bill) |
-| `./power.sh sync` | Reconcile running box: git-pull `/opt/sandbox`, reinstall scripts + sudoers + dotfiles (tmux, ssh, git), copy any keys from `/etc/devbox/locked/keys/` onto agent, import GPG, clone any new repos in tfvars via SSH alias |
+| `./power.sh sync` | Reconcile running box: git-pull `/opt/sandbox`, reinstall scripts + sudoers + dotfiles (tmux, ssh, git, nvim), copy any keys from `/etc/devbox/locked/keys/` onto agent, import GPG, clone any new repos in tfvars via SSH alias |
 | `./rebuild.sh [--workspace <name>]` | One-shot full instance replacement: `terraform apply` → wait for bootstrap → ship SSH keys → install + reconcile → smoke-test |
 | `./sync-aws-keys.sh` | Re-inject AWS_* on rotation, no terraform apply |
 | `./sync-ssh-keys.sh [local-dir]` | Ship the 4 GitHub SSH+GPG private keys from `~/.sandbox-keys/` to `/etc/devbox/locked/keys/` (root:600). Bootstrap + `power.sh sync` install them onto agent |
@@ -147,7 +147,7 @@ sandbox/
 │   ├── scripts/        # run, sync-secrets, with_creds, tx, lock-env, unlock-env
 │   ├── sudoers.d/      # agent's sudo rules
 │   ├── tmuxinator/     # dev.yml (work), fun.yml (personal)
-│   ├── dotfiles/       # tmux/ (Oh My Tmux), ssh/ (host aliases), git/ (per-identity gitconfig)
+│   ├── dotfiles/       # tmux/ (Oh My Tmux), ssh/ (host aliases), git/ (per-identity gitconfig), nvim/ (lazy.nvim)
 │   ├── patterns/       # cred-guard.json, redactor.json (single source)
 │   └── secrets.example
 │
