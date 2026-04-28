@@ -106,13 +106,13 @@ After editing `workspaces/<ws>.tfvars`, what to run depends on which var:
 
 | Change | Apply with |
 |---|---|
-| `deepreel_repo_urls` / `fun_repo_urls` (add) | `terraform apply` then `./power.sh sync` (sync reads `terraform output`, so apply first; only adds — renames/removals leave old dirs behind) |
+| `deepreel_repo_urls` / `fun_repo_urls` (add) | `terraform apply -refresh-only` then `./power.sh sync`. **Do not run plain `terraform apply`** — repo lists are templated into `user_data`, and `user_data_replace_on_change = true` would destroy the instance. `-refresh-only` updates outputs without touching resources; sync then clones the new repo. Only adds — renames/removals leave old dirs behind |
 | `instance_type`, `ebs_size_gb`, `ebs_kms_key_alias`, `cloudwatch_log_group_arns`, `enable_ssm_break_glass` | `terraform apply` alone — AWS-resource changes, applied in-place |
 | `vpc_cidr` / `subnet_cidr` | `terraform apply` — forces instance replacement |
 | `skills_source_path` | First-boot only (`bootstrap.sh.tpl`); `power.sh sync` does **not** reconcile symlinks. Re-symlink manually or recreate the instance |
 | Secrets in `*.secrets.env` | Not tfvars — use `./sync-aws-keys.sh` (AWS keys) or `sudo sync-secrets` on the box (everything else) |
 
-`terraform apply` requires the workspace's secrets sourced as `TF_VAR_*` (see Quick start step 2).
+All `terraform` commands need the workspace's secrets sourced as `TF_VAR_*` (see Quick start step 2).
 
 ## What the agent can / can't do
 
