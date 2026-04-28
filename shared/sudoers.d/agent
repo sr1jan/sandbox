@@ -3,3 +3,10 @@
 # sudo bash is only used manually from the admin tmux window.
 agent ALL=(root) NOPASSWD: /usr/local/bin/run *
 agent ALL=(root) NOPASSWD: /bin/bash
+
+# Preserve TMUX/TMUX_PANE across `sudo -i`. The dev session's admin
+# window opens a `sudo -i` root shell inside agent's tmux; without this,
+# `-i` wipes those env vars and `tx fun` from that pane can't detect
+# it's already in tmux → nests instead of switch-client. TMUX is the
+# socket path string; not security-sensitive in this single-user box.
+Defaults env_keep += "TMUX TMUX_PANE"
