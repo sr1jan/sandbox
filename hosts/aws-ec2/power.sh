@@ -75,6 +75,28 @@ case "$ACTION" in
       for f in .tmux.conf .tmux.conf.local; do
         sudo install -m 644 -o agent -g agent "/opt/sandbox/shared/dotfiles/tmux/$f" "/home/agent/$f"
       done
+      sudo install -d -o agent -g agent -m 700 /home/agent/.ssh
+      sudo install -m 600 -o agent -g agent /opt/sandbox/shared/dotfiles/ssh/config /home/agent/.ssh/config
+      sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig          /home/agent/.gitconfig
+      sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig.personal /home/agent/.gitconfig.personal
+      sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig.deepreel /home/agent/.gitconfig.deepreel
+      if [ -d /etc/devbox/locked/keys ]; then
+        for k in id_ed25519_personal id_ed25519_deepreel; do
+          if sudo test -f "/etc/devbox/locked/keys/$k"; then
+            sudo install -m 600 -o agent -g agent "/etc/devbox/locked/keys/$k"     "/home/agent/.ssh/$k"
+            sudo install -m 644 -o agent -g agent "/etc/devbox/locked/keys/$k.pub" "/home/agent/.ssh/$k.pub"
+          fi
+        done
+        sudo -u agent ssh-keyscan -t ed25519,rsa github.com 2>/dev/null \
+          | sudo -u agent tee -a /home/agent/.ssh/known_hosts >/dev/null || true
+        sudo install -d -o agent -g agent -m 700 /home/agent/.gnupg
+        for g in gpg_personal.asc gpg_deepreel.asc; do
+          if sudo test -f "/etc/devbox/locked/keys/$g"; then
+            sudo -u agent gpg --batch --import "/etc/devbox/locked/keys/$g" 2>&1 \
+              | grep -vE "secret key imported|already in secret keyring" || true
+          fi
+        done
+      fi
     '
 
     echo "[power] Cloning any missing repos from current tfvars..."
