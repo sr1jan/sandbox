@@ -68,6 +68,7 @@ case "$ACTION" in
       for s in run lock-env unlock-env sync-secrets with_creds tx; do
         sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
       done
+      sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
       sudo -u agent mkdir -p /home/agent/.config/tmuxinator
       for cfg in /opt/sandbox/shared/tmuxinator/*.yml; do
         sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
