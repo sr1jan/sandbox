@@ -1,0 +1,16 @@
+# GitHub host aliases — split personal vs work GitHub identities.
+# `url.insteadOf` rules in ~/.gitconfig.personal / ~/.gitconfig.deepreel
+# rewrite plain github.com URLs to the matching alias based on which
+# /workspace/{fun,core}/ directory the repo lives in, so day-to-day git
+# usage doesn't need to know about these aliases.
+Host github.com-personal
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_personal
+  IdentitiesOnly yes
+
+Host github.com-deepreel
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_deepreel
+  IdentitiesOnly yes

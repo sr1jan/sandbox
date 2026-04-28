@@ -203,6 +203,48 @@ for f in .tmux.conf .tmux.conf.local; do
     "$SANDBOX_DIR/shared/dotfiles/tmux/$f" "/home/agent/$f"
 done
 
+# --- GitHub SSH + GPG keys for agent (vault-pulled by sync-ssh-keys.sh) ---
+# Privates land in /etc/devbox/locked/keys/ (root:600). Bootstrap copies them
+# into ~agent and imports the GPG secret keys. Skipped silently if no keys
+# have been shipped yet — sandbox is still functional via gh/HTTPS.
+if [ -d /etc/devbox/locked/keys ]; then
+  echo "[bootstrap] Installing GitHub SSH + GPG keys for agent..."
+  install -d -o agent -g agent -m 700 /home/agent/.ssh
+  for k in id_ed25519_personal id_ed25519_deepreel; do
+    if [ -f "/etc/devbox/locked/keys/$k" ]; then
+      install -m 600 -o agent -g agent "/etc/devbox/locked/keys/$k"     "/home/agent/.ssh/$k"
+      install -m 644 -o agent -g agent "/etc/devbox/locked/keys/$k.pub" "/home/agent/.ssh/$k.pub"
+    fi
+  done
+  # Pre-trust github.com to avoid first-use host-key prompts.
+  sudo -u agent ssh-keyscan -t ed25519,rsa github.com 2>/dev/null \
+    | sudo -u agent tee -a /home/agent/.ssh/known_hosts >/dev/null || true
+  sudo -u agent chmod 600 /home/agent/.ssh/known_hosts || true
+
+  install -d -o agent -g agent -m 700 /home/agent/.gnupg
+  for g in gpg_personal.asc gpg_deepreel.asc; do
+    if [ -f "/etc/devbox/locked/keys/$g" ]; then
+      sudo -u agent gpg --batch --import "/etc/devbox/locked/keys/$g" 2>&1 \
+        | grep -v 'secret key imported' || true
+    fi
+  done
+fi
+
+# --- ssh + git dotfiles for agent ---
+# Independent of key install: even without keys yet, these are harmless to
+# install. ssh/config references IdentityFiles that may not exist (ssh just
+# falls back); gitconfig's includeIf is dormant until repos exist under
+# /workspace/{fun,core}.
+install -d -o agent -g agent -m 700 /home/agent/.ssh
+install -m 600 -o agent -g agent \
+  "$SANDBOX_DIR/shared/dotfiles/ssh/config" /home/agent/.ssh/config
+install -m 644 -o agent -g agent \
+  "$SANDBOX_DIR/shared/dotfiles/git/gitconfig"          /home/agent/.gitconfig
+install -m 644 -o agent -g agent \
+  "$SANDBOX_DIR/shared/dotfiles/git/gitconfig.personal" /home/agent/.gitconfig.personal
+install -m 644 -o agent -g agent \
+  "$SANDBOX_DIR/shared/dotfiles/git/gitconfig.deepreel" /home/agent/.gitconfig.deepreel
+
 # --- Set up gh CLI auth for the agent (one-time, persists in ~/.config/gh) ---
 # Reads token from the secrets file we just wrote. Subsequent `sudo run gh ...`
 # calls work without env vars because gh stored creds in agent's home.

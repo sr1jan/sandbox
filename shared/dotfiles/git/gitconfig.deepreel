@@ -1,0 +1,8 @@
+[user]
+	email = srijan@deepreel.com
+	signingkey = 9543742F7F9F9230
+
+[url "git@github.com-deepreel:"]
+	insteadOf = git@github.com:
+[url "git@github.com-deepreel:"]
+	insteadOf = https://github.com/

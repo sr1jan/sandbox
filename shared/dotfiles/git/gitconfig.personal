@@ -1,0 +1,8 @@
+[user]
+	email = srofficialsingh@gmail.com
+	signingkey = C07C02BFEE9996E7
+
+[url "git@github.com-personal:"]
+	insteadOf = git@github.com:
+[url "git@github.com-personal:"]
+	insteadOf = https://github.com/

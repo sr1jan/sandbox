@@ -2,6 +2,16 @@
 hosts/docker-mac/secrets
 *.pem
 *.key
+# SSH private keys (no extension — catches id_ed25519_personal etc.)
+id_ed25519*
+id_rsa*
+id_ecdsa*
+id_dsa*
+# GPG armored exports + binary keyrings
+*.asc
+*.gpg
+# Operator's local staging dir for sandbox-vm keys (Mac side)
+.sandbox-keys/
 
 # Docker build artifacts
 hosts/docker-mac/.env

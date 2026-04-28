@@ -1,0 +1,23 @@
+[user]
+	name = Srijan
+
+[commit]
+	gpgsign = true
+[tag]
+	gpgsign = true
+[gpg]
+	format = openpgp
+
+[init]
+	defaultBranch = main
+[pull]
+	ff = only
+
+# Identity is selected by directory: anything under /workspace/fun/ uses
+# the personal email + GPG key + SSH alias; anything under /workspace/core/
+# uses the deepreel set. Both files also carry url.insteadOf rules that
+# rewrite github.com URLs to the right host alias automatically.
+[includeIf "gitdir:/workspace/fun/"]
+	path = ~/.gitconfig.personal
+[includeIf "gitdir:/workspace/core/"]
+	path = ~/.gitconfig.deepreel

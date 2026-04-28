@@ -20,7 +20,9 @@
     "\\.docker/config\\.json",
     "\\.npmrc$",
     "\\.pypirc$",
-    "\\.netrc$"
+    "\\.netrc$",
+    "/\\.ssh/id_",
+    "/\\.gnupg/"
   ],
   "bash_patterns": [
     "\\bcat\\b.*\\.env",
@@ -58,6 +60,12 @@
     "\\bsudo\\s+-s\\b",
     "python.*os\\.environ",
     "python.*subprocess.*env",
-    "node.*process\\.env"
+    "node.*process\\.env",
+    "\\bcat\\b.*\\.ssh/id_",
+    "\\bless\\b.*\\.ssh/id_",
+    "\\bhead\\b.*\\.ssh/id_",
+    "\\btail\\b.*\\.ssh/id_",
+    "\\bmore\\b.*\\.ssh/id_",
+    "\\bgpg\\b.*--export-secret"
   ]
 }
