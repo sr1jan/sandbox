@@ -16,8 +16,19 @@ NAME="${1:-dev}"
 
 # Re-enter as agent if invoked by another user. Recurses into tx (not
 # straight to tmuxinator) so the inside-tmux check below still fires.
+#
+# `sudo -u agent -i` runs a clean login shell that wipes TMUX. That's
+# fine when called from a plain shell, but it breaks `tx fun` invoked
+# from inside the dev session's admin pane (which is `sudo -i` root in
+# agent's own tmux): the inner TMUX check at the next block can't tell
+# we're already in a tmux pane, so it nests instead of switch-client.
+# Re-inject TMUX into the agent shell to fix that case.
 if [ "$(id -un)" != "agent" ]; then
-  exec sudo -u agent -i tx "$NAME"
+  if [ -n "${TMUX:-}" ]; then
+    exec sudo -u agent -i bash -c "TMUX=$(printf %q "$TMUX") exec tx $(printf %q "$NAME")"
+  else
+    exec sudo -u agent -i tx "$NAME"
+  fi
 fi
 
 # Inside an existing agent tmux: don't let tmuxinator attach a second
