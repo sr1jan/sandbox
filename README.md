@@ -69,16 +69,25 @@ terraform workspace new my-ws
 set -a; source ../../../workspaces/my-ws.secrets.env; set +a
 terraform apply -var-file=../../../workspaces/my-ws.tfvars
 
-# 3. Connect
+# 3. Ship operator-supplied SSH/GPG keys + reconcile
+#    Bootstrap can't clone repos until keys arrive, so this step is
+#    mandatory on first apply. Equivalent to step 2+3 wrapped in one
+#    command: ./rebuild.sh --workspace my-ws (use this for later rebuilds).
 cd ..
+./sync-ssh-keys.sh                      # ships ~/.sandbox-keys/ → /etc/devbox/locked/keys/
+./power.sh sync                         # installs keys onto agent + retries clones
+
+# 4. Connect
 ./connect.sh                            # SSH as ubuntu (sudo-capable)
 ./connect.sh --user agent               # SSH as agent
 ```
 
 The bootstrap installs Claude Code + hooks, joins Tailscale, populates
-secrets at `/etc/devbox/locked/secrets`, and `gh repo clone`s every entry
-in `deepreel_repo_urls` (→ `/workspace/core/`) and `fun_repo_urls` (→
-`/workspace/fun/`).
+secrets at `/etc/devbox/locked/secrets`, and clones the repos in
+`deepreel_repo_urls` / `fun_repo_urls` into `/workspace/{core,fun}/`
+via the per-identity SSH host aliases (`github.com-deepreel` /
+`github.com-personal`). Clones depend on `sync-ssh-keys.sh` having
+shipped your keypairs — otherwise step 3's `power.sh sync` retries them.
 
 ## Day-to-day commands
 
@@ -97,7 +106,7 @@ in `deepreel_repo_urls` (→ `/workspace/core/`) and `fun_repo_urls` (→
 |---|---|
 | `./connect.sh` | SSH (defaults to ubuntu; `--user agent` for the locked-down user) |
 | `./power.sh status\|start\|stop` | Lifecycle (stop = compute $0/hr; EBS + EIP still bill) |
-| `./power.sh sync` | Reconcile running box (git pull /opt/sandbox, reinstall scripts, clone any new repos in tfvars) |
+| `./power.sh sync` | Reconcile running box: git-pull `/opt/sandbox`, reinstall scripts + sudoers + dotfiles (tmux, ssh, git), copy any keys from `/etc/devbox/locked/keys/` onto agent, import GPG, clone any new repos in tfvars via SSH alias |
 | `./rebuild.sh [--workspace <name>]` | One-shot full instance replacement: `terraform apply` → wait for bootstrap → ship SSH keys → install + reconcile → smoke-test |
 | `./sync-aws-keys.sh` | Re-inject AWS_* on rotation, no terraform apply |
 | `./sync-ssh-keys.sh [local-dir]` | Ship the 4 GitHub SSH+GPG private keys from `~/.sandbox-keys/` to `/etc/devbox/locked/keys/` (root:600). Bootstrap + `power.sh sync` install them onto agent |
@@ -138,7 +147,7 @@ sandbox/
 │   ├── scripts/        # run, sync-secrets, with_creds, tx, lock-env, unlock-env
 │   ├── sudoers.d/      # agent's sudo rules
 │   ├── tmuxinator/     # dev.yml (work), fun.yml (personal)
-│   ├── dotfiles/       # tmux/ (Oh My Tmux .tmux.conf + .tmux.conf.local)
+│   ├── dotfiles/       # tmux/ (Oh My Tmux), ssh/ (host aliases), git/ (per-identity gitconfig)
 │   ├── patterns/       # cred-guard.json, redactor.json (single source)
 │   └── secrets.example
 │
@@ -147,7 +156,9 @@ sandbox/
 │   └── pi/             # TS extensions for Pi
 │
 ├── hosts/
-│   ├── aws-ec2/        # terraform/, bootstrap.sh.tpl, power.sh, connect.sh, sync-aws-keys.sh
+│   ├── aws-ec2/        # terraform/, bootstrap.sh.tpl, power.sh, connect.sh,
+│   │                   # rebuild.sh, sync-aws-keys.sh, sync-ssh-keys.sh,
+│   │                   # sync-project-env.sh, seed-from-dump.sh
 │   ├── docker-mac/     # Mac Docker mode
 │   └── gcp-vm/         # GCP VM bootstrap
 │
