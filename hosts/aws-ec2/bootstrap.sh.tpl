@@ -14,10 +14,10 @@
 # Secrets (also templated; written to /etc/devbox/locked/secrets via
 # sync-secrets, NEVER echoed to the bootstrap log):
 #   ${aws_access_key_id} ${aws_secret_access_key} ${aws_default_region}
-#   ${gh_token_deepreel} ${gh_token_sandbox}
 #   ${anthropic_api_key}
 #   ${database_replica_host} ${database_replica_name}
 #   ${database_replica_user} ${database_replica_password}
+# GitHub auth: SSH keys vault-pulled by ./sync-ssh-keys.sh (no token).
 
 set -euo pipefail
 exec > >(tee -a /var/log/sandbox-bootstrap.log) 2>&1
@@ -82,8 +82,8 @@ if ! command -v aws &>/dev/null; then
   cd -
 fi
 
-# GitHub CLI (gh) — used by bootstrap to clone private deepreel repos and
-# at runtime by the agent (`sudo run gh repo clone deepreel/foo`).
+# GitHub CLI (gh) — installed for runtime use by skills/agents that need
+# `gh api`. Bootstrap itself clones via SSH (no token), so no auto-login.
 if ! command -v gh &>/dev/null; then
   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg status=none
@@ -152,7 +152,7 @@ chmod 600 /etc/devbox/locked/secrets
 # Heredoc body is single-quote-delimited so bash never expands $ or `…` in
 # the values; sync-secrets reads each KEY=value line, single-quotes the
 # value, atomically writes to /etc/devbox/locked/secrets. Empty values are
-# skipped, so optional secrets (gh_token_sandbox, anthropic_api_key, etc.)
+# skipped, so optional secrets (anthropic_api_key, database_replica_*, etc.)
 # don't pollute the file when unset. Output goes nowhere — no values touch
 # /var/log/sandbox-bootstrap.log.
 echo "[bootstrap] Writing secrets to /etc/devbox/locked/secrets..."
@@ -160,8 +160,6 @@ echo "[bootstrap] Writing secrets to /etc/devbox/locked/secrets..."
 AWS_ACCESS_KEY_ID=${aws_access_key_id}
 AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
 AWS_DEFAULT_REGION=${aws_default_region}
-GH_TOKEN_DEEPREEL=${gh_token_deepreel}
-GH_TOKEN_SANDBOX=${gh_token_sandbox}
 ANTHROPIC_API_KEY=${anthropic_api_key}
 DATABASE_REPLICA_HOST=${database_replica_host}
 DATABASE_REPLICA_NAME=${database_replica_name}
@@ -248,26 +246,16 @@ install -m 644 -o agent -g agent \
 install -m 644 -o agent -g agent \
   "$SANDBOX_DIR/shared/dotfiles/git/gitconfig.deepreel" /home/agent/.gitconfig.deepreel
 
-# --- Set up gh CLI auth for the agent (one-time, persists in ~/.config/gh) ---
-# Reads token from the secrets file we just wrote. Subsequent `sudo run gh ...`
-# calls work without env vars because gh stored creds in agent's home.
-if grep -q '^export GH_TOKEN_DEEPREEL=' /etc/devbox/locked/secrets 2>/dev/null; then
-  echo "[bootstrap] Configuring gh CLI auth for agent..."
-  # Source secrets in a subshell so the value never lands in our env or log.
-  ( set -a; . /etc/devbox/locked/secrets; set +a
-    if [ -n "$${GH_TOKEN_DEEPREEL:-}" ]; then
-      echo "$${GH_TOKEN_DEEPREEL}" \
-        | sudo -u agent gh auth login --with-token --hostname github.com --git-protocol https >/dev/null 2>&1
-    fi
-  )
-fi
-
 # --- Clone work repos (deepreel) into /workspace/core/ ---
 # --- Clone personal repos (fun) into /workspace/fun/ ---
 # Both lists accept either "owner/name" (preferred) or full https URL.
+# Cloning goes via the SSH host alias matching the target tree, so the
+# right per-identity key is used and `url.insteadOf` rules in the
+# agent's gitconfig are never needed at clone time.
 clone_repos_into() {
   local target_root="$1"
   local repo_json="$2"
+  local host_alias="$3"   # github.com-deepreel or github.com-personal
   mkdir -p "$target_root"
   chown agent:agent "$target_root"
   echo "$repo_json" | jq -r '.[]' | while read -r repo; do
@@ -280,17 +268,17 @@ clone_repos_into() {
     esac
     repo_name="$(basename "$ownername")"
     if [ ! -d "$target_root/$repo_name" ]; then
-      sudo -u agent gh repo clone "$ownername" "$target_root/$repo_name" \
-        || echo "Warning: failed to clone $ownername into $target_root (token may lack access or repo doesn't exist)"
+      sudo -u agent git clone "git@$host_alias:$ownername.git" "$target_root/$repo_name" \
+        || echo "Warning: failed to clone $ownername into $target_root (key may lack access or repo doesn't exist)"
     fi
   done
 }
 
 echo "[bootstrap] Cloning work repos into /workspace/core/..."
-clone_repos_into /workspace/core '${deepreel_repo_urls}'
+clone_repos_into /workspace/core '${deepreel_repo_urls}' github.com-deepreel
 
 echo "[bootstrap] Cloning personal repos into /workspace/fun/..."
-clone_repos_into /workspace/fun '${fun_repo_urls}'
+clone_repos_into /workspace/fun '${fun_repo_urls}' github.com-personal
 
 echo "=== Sandbox bootstrap complete: $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
 echo "Connect: tailscale ssh ubuntu@${tailnet_hostname}"

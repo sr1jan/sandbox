@@ -111,8 +111,8 @@ case "$ACTION" in
       while read -r bucket repo; do
         [ -z "$repo" ] && continue
         case "$bucket" in
-          CORE) target=/workspace/core ;;
-          FUN)  target=/workspace/fun ;;
+          CORE) target=/workspace/core; alias=github.com-deepreel ;;
+          FUN)  target=/workspace/fun;  alias=github.com-personal ;;
         esac
         case "$repo" in
           https://github.com/*)
@@ -122,10 +122,10 @@ case "$ACTION" in
         esac
         repo_name="$(basename "$ownername")"
         if [ ! -d "$target/$repo_name" ]; then
-          echo "  cloning $ownername → $target/$repo_name"
+          echo "  cloning $ownername → $target/$repo_name (via $alias)"
           sudo mkdir -p "$target" && sudo chown agent:agent "$target"
-          sudo -u agent gh repo clone "$ownername" "$target/$repo_name" \
-            || echo "  warning: failed to clone $ownername (token may lack access)"
+          sudo -u agent git clone "git@$alias:$ownername.git" "$target/$repo_name" \
+            || echo "  warning: failed to clone $ownername (key may lack access)"
         else
           echo "  skip $ownername (already cloned)"
         fi
