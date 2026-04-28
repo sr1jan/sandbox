@@ -216,15 +216,18 @@ if [ -d /etc/devbox/locked/keys ]; then
       install -m 644 -o agent -g agent "/etc/devbox/locked/keys/$k.pub" "/home/agent/.ssh/$k.pub"
     fi
   done
-  # Pre-trust github.com to avoid first-use host-key prompts.
-  sudo -u agent ssh-keyscan -t ed25519,rsa github.com 2>/dev/null \
+  # Pre-trust ssh.github.com:443 (GitHub's SSH-over-HTTPS endpoint) — port
+  # 22 outbound is blocked by the iptables egress allowlist above, so we
+  # use the 443 endpoint everywhere in the SSH config too.
+  sudo -u agent ssh-keyscan -p 443 -t ed25519,rsa ssh.github.com 2>/dev/null \
     | sudo -u agent tee -a /home/agent/.ssh/known_hosts >/dev/null || true
   sudo -u agent chmod 600 /home/agent/.ssh/known_hosts || true
 
   install -d -o agent -g agent -m 700 /home/agent/.gnupg
   for g in gpg_personal.asc gpg_deepreel.asc; do
     if [ -f "/etc/devbox/locked/keys/$g" ]; then
-      sudo -u agent gpg --batch --import "/etc/devbox/locked/keys/$g" 2>&1 \
+      cat "/etc/devbox/locked/keys/$g" \
+        | sudo -u agent gpg --batch --import 2>&1 \
         | grep -v 'secret key imported' || true
     fi
   done

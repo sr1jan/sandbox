@@ -3,14 +3,21 @@
 # rewrite plain github.com URLs to the matching alias based on which
 # /workspace/{fun,core}/ directory the repo lives in, so day-to-day git
 # usage doesn't need to know about these aliases.
+#
+# We connect via ssh.github.com:443 instead of github.com:22 because the
+# sandbox firewall (bootstrap.sh.tpl iptables block) only permits outbound
+# 80/443/53/5432/41641. Port 443 is GitHub's documented SSH-over-HTTPS
+# endpoint — same auth, no firewall change.
 Host github.com-personal
-  HostName github.com
+  HostName ssh.github.com
+  Port 443
   User git
   IdentityFile ~/.ssh/id_ed25519_personal
   IdentitiesOnly yes
 
 Host github.com-deepreel
-  HostName github.com
+  HostName ssh.github.com
+  Port 443
   User git
   IdentityFile ~/.ssh/id_ed25519_deepreel
   IdentitiesOnly yes
