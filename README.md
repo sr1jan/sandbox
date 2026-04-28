@@ -134,6 +134,7 @@ sandbox/
 │   ├── scripts/        # run, sync-secrets, with_creds, tx, lock-env, unlock-env
 │   ├── sudoers.d/      # agent's sudo rules
 │   ├── tmuxinator/     # dev.yml (work), fun.yml (personal)
+│   ├── dotfiles/       # tmux/ (Oh My Tmux .tmux.conf + .tmux.conf.local)
 │   ├── patterns/       # cred-guard.json, redactor.json (single source)
 │   └── secrets.example
 │

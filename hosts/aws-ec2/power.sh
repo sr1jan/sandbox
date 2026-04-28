@@ -72,6 +72,9 @@ case "$ACTION" in
       for cfg in /opt/sandbox/shared/tmuxinator/*.yml; do
         sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
       done
+      for f in .tmux.conf .tmux.conf.local; do
+        sudo install -m 644 -o agent -g agent "/opt/sandbox/shared/dotfiles/tmux/$f" "/home/agent/$f"
+      done
     '
 
     echo "[power] Cloning any missing repos from current tfvars..."
