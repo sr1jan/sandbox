@@ -98,6 +98,7 @@ in `deepreel_repo_urls` (→ `/workspace/core/`) and `fun_repo_urls` (→
 | `./connect.sh` | SSH (defaults to ubuntu; `--user agent` for the locked-down user) |
 | `./power.sh status\|start\|stop` | Lifecycle (stop = compute $0/hr; EBS + EIP still bill) |
 | `./power.sh sync` | Reconcile running box (git pull /opt/sandbox, reinstall scripts, clone any new repos in tfvars) |
+| `./rebuild.sh [--workspace <name>]` | One-shot full instance replacement: `terraform apply` → wait for bootstrap → ship SSH keys → install + reconcile → smoke-test |
 | `./sync-aws-keys.sh` | Re-inject AWS_* on rotation, no terraform apply |
 | `./sync-ssh-keys.sh [local-dir]` | Ship the 4 GitHub SSH+GPG private keys from `~/.sandbox-keys/` to `/etc/devbox/locked/keys/` (root:600). Bootstrap + `power.sh sync` install them onto agent |
 | `./sync-project-env.sh <local-dir> <vm-target> [files...]` | Ship `.env*` from a local project dir to `/etc/devbox/locked/projects/<vm-target>/` (root:600). E.g. `… ~/work/deepreel/core/backend core/backend` |
