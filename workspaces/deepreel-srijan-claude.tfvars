@@ -38,7 +38,7 @@ deepreel_repo_urls = [
   "deepreel/backend",
   "deepreel/deepreel-frontend",
   "deepreel/deepreel-web",
-  "deepreel/skills",
+  "deepreel/agent-skills",
 ]
 
 # Personal repos → /workspace/fun/. Same form. Use `tx fun` to launch
