@@ -80,7 +80,7 @@ case "$ACTION" in
       sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig          /home/agent/.gitconfig
       sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig.personal /home/agent/.gitconfig.personal
       sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig.deepreel /home/agent/.gitconfig.deepreel
-      if [ -d /etc/devbox/locked/keys ]; then
+      if sudo test -d /etc/devbox/locked/keys; then
         for k in id_ed25519_personal id_ed25519_deepreel; do
           if sudo test -f "/etc/devbox/locked/keys/$k"; then
             sudo install -m 600 -o agent -g agent "/etc/devbox/locked/keys/$k"     "/home/agent/.ssh/$k"
