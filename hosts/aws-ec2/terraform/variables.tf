@@ -81,13 +81,13 @@ variable "enable_ssm_break_glass" {
 }
 
 variable "deepreel_repo_urls" {
-  description = "Work repos to clone into /workspace/core/ during bootstrap. Use 'owner/name' form (preferred — uses gh repo clone). GH_TOKEN_DEEPREEL must have read access."
+  description = "Work repos to clone into /workspace/core/ during bootstrap. Use 'owner/name' form. Cloning goes via the github.com-deepreel SSH alias, so the deepreel SSH key (sync-ssh-keys.sh) must have read access."
   type        = list(string)
   default     = []
 }
 
 variable "fun_repo_urls" {
-  description = "Personal repos to clone into /workspace/fun/ during bootstrap. Same form as deepreel_repo_urls. Public repos clone unauthenticated; private ones need the same GH_TOKEN_DEEPREEL (or an extended token) with access to the owner."
+  description = "Personal repos to clone into /workspace/fun/ during bootstrap. Same form as deepreel_repo_urls. Cloning goes via the github.com-personal SSH alias."
   type        = list(string)
   default     = []
 }
@@ -115,20 +115,6 @@ variable "sandbox_repo_ref" {
 # ---- Operator-supplied secrets (passed via user-data → bootstrap → /etc/devbox/locked/secrets) ----
 # All sensitive. Provide via TF_VAR_* in workspaces/<name>.secrets.env (gitignored).
 # These land on the VM in the global secrets file, sourced by `sudo run`.
-
-variable "gh_token_deepreel" {
-  description = "GitHub PAT scoped to deepreel/* private repos (read). Used by bootstrap for repo clone and by agent runtime via gh CLI. Empty string disables private-repo clone."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "gh_token_sandbox" {
-  description = "Optional GitHub PAT for sr1jan/sandbox (e.g. agent self-modifies infra). Not required for v1 since sandbox repo is public."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
 
 variable "anthropic_api_key" {
   description = "Anthropic API key. Optional — Claude Code can device-flow login on first run if empty."

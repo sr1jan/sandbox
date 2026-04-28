@@ -48,7 +48,9 @@ see credentials in `env`, or reach the internet outside an allowlist.
 - AWS CLI configured (`aws sts get-caller-identity` works)
 - Tailscale account, OAuth client with `auth_keys:write` + `devices:read+write`,
   ACL tag `tag:claude-sandbox` defined with you as owner
-- GitHub fine-grained PAT scoped to the private repos you want cloned
+- Two GitHub SSH+GPG keypairs (one per identity) at `~/.sandbox-keys/`,
+  with the public halves registered on the matching GitHub accounts.
+  Used by `./hosts/aws-ec2/sync-ssh-keys.sh` to populate the VM
 
 **Provision**
 
@@ -56,7 +58,7 @@ see credentials in `env`, or reach the internet outside an allowlist.
 # 1. Per-workspace config (gitignored)
 cd workspaces
 cp deepreel-srijan-claude.secrets.env.example my-ws.secrets.env
-vi my-ws.secrets.env       # Tailscale OAuth + GH_TOKEN + DB creds
+vi my-ws.secrets.env       # Tailscale OAuth + DB creds (GitHub auth is via SSH keys, not env)
 cp deepreel-srijan-claude.tfvars my-ws.tfvars
 vi my-ws.tfvars            # which repos to clone
 
@@ -97,6 +99,7 @@ in `deepreel_repo_urls` (→ `/workspace/core/`) and `fun_repo_urls` (→
 | `./power.sh status\|start\|stop` | Lifecycle (stop = compute $0/hr; EBS + EIP still bill) |
 | `./power.sh sync` | Reconcile running box (git pull /opt/sandbox, reinstall scripts, clone any new repos in tfvars) |
 | `./sync-aws-keys.sh` | Re-inject AWS_* on rotation, no terraform apply |
+| `./sync-ssh-keys.sh [local-dir]` | Ship the 4 GitHub SSH+GPG private keys from `~/.sandbox-keys/` to `/etc/devbox/locked/keys/` (root:600). Bootstrap + `power.sh sync` install them onto agent |
 | `./sync-project-env.sh <local-dir> <vm-target> [files...]` | Ship `.env*` from a local project dir to `/etc/devbox/locked/projects/<vm-target>/` (root:600). E.g. `… ~/work/deepreel/core/backend core/backend` |
 | `./seed-from-dump.sh <dump> <db>` | `pg_restore` a custom-format dump into the sandbox `dp-pg` container, idempotent (`--clean --if-exists`) |
 

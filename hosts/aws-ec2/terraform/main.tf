@@ -177,8 +177,6 @@ resource "aws_instance" "sandbox" {
     aws_access_key_id         = aws_iam_access_key.sandbox.id
     aws_secret_access_key     = aws_iam_access_key.sandbox.secret
     aws_default_region        = var.aws_region
-    gh_token_deepreel         = var.gh_token_deepreel
-    gh_token_sandbox          = var.gh_token_sandbox
     anthropic_api_key         = var.anthropic_api_key
     database_replica_host     = var.database_replica_host
     database_replica_name     = var.database_replica_name
