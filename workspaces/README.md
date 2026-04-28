@@ -36,11 +36,12 @@ Examples: `deepreel-srijan-claude`, `personal-srijan-pi`,
    `tailscale_tailnet`, `deepreel_repo_urls`, etc.
 
 3. Edit `my-workspace.secrets.env`: fill in the real Tailscale OAuth
-   credentials, GitHub token (for private repo clones), Anthropic API
-   key, and DB replica creds. Setting `TF_VAR_database_replica_host`
-   automatically opens outbound 5432 in the SG.
+   credentials, optional Anthropic API key, and DB replica creds.
+   Setting `TF_VAR_database_replica_host` automatically opens outbound
+   5432 in the SG. No GitHub token — auth on the VM is via SSH+GPG
+   keypairs at `~/.sandbox-keys/`, shipped by `sync-ssh-keys.sh`.
 
-4. Create the Terraform workspace and apply:
+4. Create the Terraform workspace, apply, and ship operator-supplied keys:
    ```bash
    cd ../hosts/aws-ec2/terraform
    terraform workspace new my-workspace
@@ -48,6 +49,10 @@ Examples: `deepreel-srijan-claude`, `personal-srijan-pi`,
    source ../../../workspaces/my-workspace.secrets.env
    set +a
    terraform apply -var-file=../../../workspaces/my-workspace.tfvars
+
+   cd ..
+   ./sync-ssh-keys.sh                       # ~/.sandbox-keys/ → VM
+   ./power.sh sync                          # installs keys onto agent + retries clones
    ```
 
 ## Terraform state

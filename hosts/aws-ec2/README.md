@@ -29,7 +29,12 @@ for the full architecture. Key constraints:
   in the tailnet ACL
 - A workspace tfvars file under `../../workspaces/<workspace>.tfvars`
   and a matching `<workspace>.secrets.env` (gitignored) with the
-  Tailscale OAuth credentials
+  Tailscale OAuth credentials, optional Anthropic key, and prod-replica DB creds
+- Two GitHub SSH+GPG keypairs at `~/.sandbox-keys/` (one for personal,
+  one for work) with the public halves registered on the matching
+  GitHub accounts. `./sync-ssh-keys.sh` ships them to the VM after
+  `terraform apply`. Without these, the bootstrap can't clone any
+  private repos via the per-identity SSH host aliases
 
 ## First-time setup
 
@@ -55,12 +60,24 @@ terraform apply -var-file=../../../workspaces/<workspace-name>.tfvars
 ```
 
 Wait ~3-5 minutes for the VM to bootstrap (installs packages, joins
-tailnet, clones deepreel repos, installs Claude Code). Progress:
+tailnet, installs Claude Code, attempts repo clones). Then ship the
+operator-supplied keys + reconcile:
+
+```bash
+cd ..
+./sync-ssh-keys.sh    # ~/.sandbox-keys/ → /etc/devbox/locked/keys/
+./power.sh sync       # installs keys onto agent + retries any clones bootstrap missed
+```
+
+For subsequent rebuilds, `./rebuild.sh` does `terraform apply` + the
+two sync steps + a smoke test in one command.
+
+Progress:
 
 ```bash
 # Watch the tailnet admin console — the new node should appear.
 # If you need to see bootstrap logs:
-../connect.sh --user ubuntu
+./connect.sh --user ubuntu
 sudo tail -f /var/log/sandbox-bootstrap.log
 ```
 
@@ -102,20 +119,20 @@ aws ec2 disassociate-iam-instance-profile \
 
 ## Post-apply setup
 
-1. Copy the generated IAM credentials from the outputs into
-   `/etc/devbox/secrets` on the VM:
+The bootstrap auto-templates AWS keys + Anthropic key + DB creds from
+the workspace's `TF_VAR_*` into `/etc/devbox/locked/secrets` (root:600)
+via `sync-secrets`. There's no manual edit required for those.
 
-   ```bash
-   # On the VM, as admin (ubuntu):
-   sudo tee -a /etc/devbox/secrets <<EOF
-   export AWS_ACCESS_KEY_ID=<terraform output -raw iam_user_access_key_id>
-   export AWS_SECRET_ACCESS_KEY=<terraform output -raw iam_user_secret_access_key>
-   export AWS_DEFAULT_REGION=ap-south-1
-   EOF
-   sudo chmod 600 /etc/devbox/secrets
-   ```
+Operator-only material that the repo doesn't carry — ship after apply:
 
-2. Run the go-live verification checklist from spec §8.1.
+```bash
+./sync-ssh-keys.sh                         # GitHub SSH+GPG keys
+./sync-project-env.sh <local-dir> <vm-target>  # per-project .env files (repeat per project)
+./power.sh sync                            # installs everything onto agent
+```
+
+To rotate AWS keys later, use `./sync-aws-keys.sh` (no terraform apply).
+For non-tfvars secrets, edit on the box: `sudo sync-secrets < new-keyvals`.
 
 ## Teardown
 
