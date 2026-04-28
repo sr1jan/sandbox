@@ -201,6 +201,11 @@ for f in .tmux.conf .tmux.conf.local; do
     "$SANDBOX_DIR/shared/dotfiles/tmux/$f" "/home/agent/$f"
 done
 
+# --- nvim config for agent (lazy.nvim auto-bootstraps on first launch) ---
+sudo -u agent mkdir -p /home/agent/.config/nvim
+sudo -u agent cp -rT "$SANDBOX_DIR/shared/dotfiles/nvim" /home/agent/.config/nvim
+chown -R agent:agent /home/agent/.config/nvim
+
 # --- GitHub SSH + GPG keys for agent (vault-pulled by sync-ssh-keys.sh) ---
 # Privates land in /etc/devbox/locked/keys/ (root:600). Bootstrap copies them
 # into ~agent and imports the GPG secret keys. Skipped silently if no keys
