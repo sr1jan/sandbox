@@ -100,6 +100,20 @@ in `deepreel_repo_urls` (→ `/workspace/core/`) and `fun_repo_urls` (→
 | `./sync-project-env.sh <local-dir> <vm-target> [files...]` | Ship `.env*` from a local project dir to `/etc/devbox/locked/projects/<vm-target>/` (root:600). E.g. `… ~/work/deepreel/core/backend core/backend` |
 | `./seed-from-dump.sh <dump> <db>` | `pg_restore` a custom-format dump into the sandbox `dp-pg` container, idempotent (`--clean --if-exists`) |
 
+## Updating a running box
+
+After editing `workspaces/<ws>.tfvars`, what to run depends on which var:
+
+| Change | Apply with |
+|---|---|
+| `deepreel_repo_urls` / `fun_repo_urls` (add) | `terraform apply` then `./power.sh sync` (sync reads `terraform output`, so apply first; only adds — renames/removals leave old dirs behind) |
+| `instance_type`, `ebs_size_gb`, `ebs_kms_key_alias`, `cloudwatch_log_group_arns`, `enable_ssm_break_glass` | `terraform apply` alone — AWS-resource changes, applied in-place |
+| `vpc_cidr` / `subnet_cidr` | `terraform apply` — forces instance replacement |
+| `skills_source_path` | First-boot only (`bootstrap.sh.tpl`); `power.sh sync` does **not** reconcile symlinks. Re-symlink manually or recreate the instance |
+| Secrets in `*.secrets.env` | Not tfvars — use `./sync-aws-keys.sh` (AWS keys) or `sudo sync-secrets` on the box (everything else) |
+
+`terraform apply` requires the workspace's secrets sourced as `TF_VAR_*` (see Quick start step 2).
+
 ## What the agent can / can't do
 
 | Action | Allowed | How / why blocked |
