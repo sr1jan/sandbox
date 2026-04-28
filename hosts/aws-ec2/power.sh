@@ -76,6 +76,9 @@ case "$ACTION" in
       for f in .tmux.conf .tmux.conf.local; do
         sudo install -m 644 -o agent -g agent "/opt/sandbox/shared/dotfiles/tmux/$f" "/home/agent/$f"
       done
+      sudo -u agent mkdir -p /home/agent/.config/nvim
+      sudo -u agent cp -rT /opt/sandbox/shared/dotfiles/nvim /home/agent/.config/nvim
+      sudo chown -R agent:agent /home/agent/.config/nvim
       sudo install -d -o agent -g agent -m 700 /home/agent/.ssh
       sudo install -m 600 -o agent -g agent /opt/sandbox/shared/dotfiles/ssh/config /home/agent/.ssh/config
       sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig          /home/agent/.gitconfig
