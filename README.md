@@ -176,3 +176,4 @@ sandbox/
 
 See [design spec](docs/superpowers/specs/2026-04-24-yolo-sandbox-design.md)
 and [ADRs](docs/adr/) for the full architecture.
+
