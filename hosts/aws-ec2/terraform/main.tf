@@ -109,17 +109,14 @@ resource "aws_security_group" "sandbox" {
     cidr_blocks = var.allowed_egress_cidrs
   }
 
-  # Open 5432 outbound only when the operator has actually populated
-  # DATABASE_REPLICA_HOST in workspaces/<ws>.secrets.env. Avoids needing
-  # to set the same FQDN in two places (tfvars + secrets.env).
+  # Open 5432 outbound when any external DB host is configured.
   dynamic "egress" {
-    for_each = var.database_replica_host != "" ? [1] : []
+    for_each = (var.database_replica_host != "" || var.database_staging_host != "") ? [1] : []
     content {
-      description = "Prod Postgres replica"
+      description = "Postgres (staging / prod replica)"
       from_port   = 5432
       to_port     = 5432
       protocol    = "tcp"
-      # Replica is public-access; SG restricts port only.
       cidr_blocks = ["0.0.0.0/0"]
     }
   }
@@ -178,6 +175,10 @@ resource "aws_instance" "sandbox" {
     aws_secret_access_key     = aws_iam_access_key.sandbox.secret
     aws_default_region        = var.aws_region
     anthropic_api_key         = var.anthropic_api_key
+    database_staging_host     = var.database_staging_host
+    database_staging_name     = var.database_staging_name
+    database_staging_user     = var.database_staging_user
+    database_staging_password = var.database_staging_password
     database_replica_host     = var.database_replica_host
     database_replica_name     = var.database_replica_name
     database_replica_user     = var.database_replica_user

@@ -15,6 +15,8 @@
 # sync-secrets, NEVER echoed to the bootstrap log):
 #   ${aws_access_key_id} ${aws_secret_access_key} ${aws_default_region}
 #   ${anthropic_api_key}
+#   ${database_staging_host} ${database_staging_name}
+#   ${database_staging_user} ${database_staging_password}
 #   ${database_replica_host} ${database_replica_name}
 #   ${database_replica_user} ${database_replica_password}
 # GitHub auth: SSH keys vault-pulled by ./sync-ssh-keys.sh (no token).
@@ -179,6 +181,10 @@ AWS_ACCESS_KEY_ID=${aws_access_key_id}
 AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
 AWS_DEFAULT_REGION=${aws_default_region}
 ANTHROPIC_API_KEY=${anthropic_api_key}
+STAGING_DB_HOST=${database_staging_host}
+STAGING_DB_NAME=${database_staging_name}
+STAGING_DB_USER=${database_staging_user}
+STAGING_DB_PASSWORD=${database_staging_password}
 DATABASE_REPLICA_HOST=${database_replica_host}
 DATABASE_REPLICA_NAME=${database_replica_name}
 DATABASE_REPLICA_USER=${database_replica_user}
