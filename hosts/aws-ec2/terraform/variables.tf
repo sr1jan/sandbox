@@ -123,8 +123,36 @@ variable "anthropic_api_key" {
   default     = ""
 }
 
+variable "database_staging_host" {
+  description = "Staging DB host. Setting this (or database_replica_host) triggers the SG rule to open outbound 5432."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_staging_name" {
+  description = "Staging DB name."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_staging_user" {
+  description = "Staging DB user (read-only role recommended)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "database_staging_password" {
+  description = "Staging DB password."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "database_replica_host" {
-  description = "Prod read-replica DB host. Setting this triggers the SG rule to open outbound 5432 — there's no separate flag."
+  description = "Prod read-replica DB host. Setting this (or database_staging_host) triggers the SG rule to open outbound 5432."
   type        = string
   sensitive   = true
   default     = ""

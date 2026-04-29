@@ -4,7 +4,7 @@
 # Expects:
 #   - $SANDBOX_DIR env var points at the sandbox repo root
 #   - agent user exists
-#   - Node.js 22 available
+#   - curl available (for the native installer)
 #   - jq available (used by the hooks)
 #
 # Optional env:
@@ -23,10 +23,9 @@ set -euo pipefail
 : "${AGENT_USER:=agent}"
 
 echo "[cc-install] Installing Claude Code CLI..."
-# Install globally (as the user running this script — typically root via the
-# host bootstrap). The CLI lands in /usr/lib/node_modules and the binary in
-# /usr/local/bin (or whatever npm prefix is), accessible to every user.
-npm install -g @anthropic-ai/claude-code
+# Install via the native installer into the agent's home dir so the agent
+# user owns the binary and can auto-update without sudo.
+sudo -u "$AGENT_USER" bash -c 'curl -fsSL https://cli.claude.ai/install.sh | sh'
 
 echo "[cc-install] Setting up hooks, patterns, settings..."
 sudo -u "$AGENT_USER" mkdir -p \
