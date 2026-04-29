@@ -17,20 +17,23 @@ setup() {
 teardown() { :; }
 
 # Helper: emit a PreToolUse event payload for the Bash tool.
+# Schema matches Claude Code's actual hook input: tool_name + tool_input.
 bash_event() {
   local cmd="$1"
-  printf '{"tool":"Bash","input":{"command":%s}}' \
+  printf '{"tool_name":"Bash","tool_input":{"command":%s}}' \
     "$(printf '%s' "$cmd" | jq -Rs .)"
 }
 
 # Helper: emit a PreToolUse event payload for Read/Edit/Write (all use file_path).
 read_event() {
   local path="$1"
-  printf '{"tool":"Read","input":{"file_path":%s}}' \
+  printf '{"tool_name":"Read","tool_input":{"file_path":%s}}' \
     "$(printf '%s' "$path" | jq -Rs .)"
 }
 
 # Helper: emit a PostToolUse event payload with tool_result stdout/stderr.
+# (Kept on the legacy schema for now — the redactor hook is unfixed; see
+# Layer 4 audit. Update alongside the redactor rewrite.)
 post_event() {
   local stdout="$1"
   printf '{"tool":"Bash","tool_result":{"stdout":%s,"stderr":""}}' \

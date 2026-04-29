@@ -2,10 +2,10 @@
 # Claude Code PreToolUse hook: blocks tool calls that would expose credentials.
 #
 # Input: JSON payload on stdin, e.g.:
-#   {"tool":"Bash","input":{"command":"<string>"}}
-#   {"tool":"Read","input":{"file_path":"<string>"}}
-#   {"tool":"Edit","input":{"file_path":"<string>","old_string":"...","new_string":"..."}}
-#   {"tool":"Write","input":{"file_path":"<string>","content":"..."}}
+#   {"tool_name":"Bash","tool_input":{"command":"<string>"}}
+#   {"tool_name":"Read","tool_input":{"file_path":"<string>"}}
+#   {"tool_name":"Edit","tool_input":{"file_path":"<string>","old_string":"...","new_string":"..."}}
+#   {"tool_name":"Write","tool_input":{"file_path":"<string>","content":"..."}}
 #
 # Exit codes:
 #   0 = allow (tool call proceeds)
@@ -27,11 +27,11 @@ if [ ! -f "$PATTERNS_FILE" ]; then
 fi
 
 event_json="$(cat)"
-tool="$(jq -r '.tool // empty' <<< "$event_json")"
+tool="$(jq -r '.tool_name // empty' <<< "$event_json")"
 
 case "$tool" in
   Bash)
-    command="$(jq -r '.input.command // empty' <<< "$event_json")"
+    command="$(jq -r '.tool_input.command // empty' <<< "$event_json")"
     if [ -z "$command" ]; then
       exit 0
     fi
@@ -45,7 +45,7 @@ case "$tool" in
     exit 0
     ;;
   Read|Edit|Write)
-    path="$(jq -r '.input.file_path // empty' <<< "$event_json")"
+    path="$(jq -r '.tool_input.file_path // empty' <<< "$event_json")"
     if [ -z "$path" ]; then
       exit 0
     fi
