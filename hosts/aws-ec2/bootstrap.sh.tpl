@@ -85,20 +85,20 @@ fi
 # Neovim from upstream tarball — apt's `neovim` package on 22.04 is 0.6.x,
 # too old for vim.keymap and modern lazy.nvim plugins.
 NVIM_VER=v0.12.2
-if [ ! -x "/opt/nvim-${NVIM_VER}/bin/nvim" ]; then
+if [ ! -x "/opt/nvim-$${NVIM_VER}/bin/nvim" ]; then
   case "$(uname -m)" in
     aarch64) NVIM_ARCH=arm64 ;;
     x86_64)  NVIM_ARCH=x86_64 ;;
     *) echo "[bootstrap] unsupported arch for nvim: $(uname -m)"; exit 1 ;;
   esac
   cd /tmp
-  curl -fsSLO "https://github.com/neovim/neovim/releases/download/${NVIM_VER}/nvim-linux-${NVIM_ARCH}.tar.gz"
-  tar -C /opt -xzf "nvim-linux-${NVIM_ARCH}.tar.gz"
-  mv "/opt/nvim-linux-${NVIM_ARCH}" "/opt/nvim-${NVIM_VER}"
-  rm -f "/tmp/nvim-linux-${NVIM_ARCH}.tar.gz"
+  curl -fsSLO "https://github.com/neovim/neovim/releases/download/$${NVIM_VER}/nvim-linux-$${NVIM_ARCH}.tar.gz"
+  tar -C /opt -xzf "nvim-linux-$${NVIM_ARCH}.tar.gz"
+  mv "/opt/nvim-linux-$${NVIM_ARCH}" "/opt/nvim-$${NVIM_VER}"
+  rm -f "/tmp/nvim-linux-$${NVIM_ARCH}.tar.gz"
   cd -
 fi
-ln -sfn "/opt/nvim-${NVIM_VER}/bin/nvim" /usr/local/bin/nvim
+ln -sfn "/opt/nvim-$${NVIM_VER}/bin/nvim" /usr/local/bin/nvim
 
 # GitHub CLI (gh) — installed for runtime use by skills/agents that need
 # `gh api`. Bootstrap itself clones via SSH (no token), so no auto-login.
