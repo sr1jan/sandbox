@@ -51,6 +51,12 @@ sudo cp "$SANDBOX_DIR/agents/claude-code/settings.json.template" \
 sudo sed -i.bak "s|\$HOME|$AGENT_HOME|g" "$AGENT_HOME/.claude/settings.json"
 sudo rm -f "$AGENT_HOME/.claude/settings.json.bak"
 
+# User-level CLAUDE.md — auto-loaded on every session for the agent user.
+# Documents the with_creds / sudo run pattern so bare claude sessions
+# (outside any skill workflow) know how to use credentialed CLIs.
+sudo cp "$SANDBOX_DIR/agents/claude-code/CLAUDE.md" \
+        "$AGENT_HOME/.claude/CLAUDE.md"
+
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.claude"
 
 # Install with_creds as a system binary (works in every shell context
