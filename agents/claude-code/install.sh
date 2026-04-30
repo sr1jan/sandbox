@@ -25,7 +25,7 @@ set -euo pipefail
 echo "[cc-install] Installing Claude Code CLI..."
 # Install via the native installer into the agent's home dir so the agent
 # user owns the binary and can auto-update without sudo.
-sudo -u "$AGENT_USER" bash -c 'curl -fsSL https://cli.claude.ai/install.sh | sh'
+sudo -u "$AGENT_USER" bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
 
 echo "[cc-install] Setting up hooks, patterns, settings..."
 sudo -u "$AGENT_USER" mkdir -p \
