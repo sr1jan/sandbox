@@ -74,12 +74,6 @@ variable "cloudwatch_log_group_arns" {
   default     = []
 }
 
-variable "s3_upload_max_bytes" {
-  description = "Max file size in bytes for s3:PutObject on deepreel-assets/internal/. Default 100 MB."
-  type        = number
-  default     = 104857600
-}
-
 variable "enable_ssm_break_glass" {
   description = "When true, attach the SSM-only IAM instance profile at create time (see ADR 0003). Default: false — attach on demand."
   type        = bool

@@ -69,11 +69,6 @@ data "aws_iam_policy_document" "s3_internal_upload" {
     resources = [
       "arn:aws:s3:::deepreel-assets/internal/*",
     ]
-    condition {
-      test     = "NumericLessThanEquals"
-      variable = "s3:content-length-range"
-      values   = [var.s3_upload_max_bytes]
-    }
   }
 }
 
