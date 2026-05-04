@@ -35,7 +35,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   python3 python3-venv build-essential \
   openssh-client ca-certificates iptables iptables-persistent \
   postgresql-client \
-  ruby-full
+  ruby-full \
+  ffmpeg
 
 # Node.js 22
 if ! command -v node &>/dev/null; then
@@ -101,6 +102,13 @@ if [ ! -x "/opt/nvim-$${NVIM_VER}/bin/nvim" ]; then
   cd -
 fi
 ln -sfn "/opt/nvim-$${NVIM_VER}/bin/nvim" /usr/local/bin/nvim
+
+# yt-dlp (latest release binary — apt's version is often stale)
+if ! command -v yt-dlp &>/dev/null; then
+  curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+    -o /usr/local/bin/yt-dlp
+  chmod 755 /usr/local/bin/yt-dlp
+fi
 
 # GitHub CLI (gh) — installed for runtime use by skills/agents that need
 # `gh api`. Bootstrap itself clones via SSH (no token), so no auto-login.
