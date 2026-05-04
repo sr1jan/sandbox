@@ -88,6 +88,36 @@ load test_helper
   [[ "$output" =~ "pattern" ]]
 }
 
+@test "cred-guard blocks Bash: sudo /bin/bash (absolute path bypass)" {
+  run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'sudo /bin/bash -c "cat /etc/shadow"')"
+  [ "$status" -eq 2 ]
+}
+
+@test "cred-guard blocks Bash: sudo /usr/bin/sh (absolute path bypass)" {
+  run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'sudo /usr/bin/sh -c "id"')"
+  [ "$status" -eq 2 ]
+}
+
+@test "cred-guard blocks Bash: sudo /bin/cat (absolute path bypass)" {
+  run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'sudo /bin/cat /etc/shadow')"
+  [ "$status" -eq 2 ]
+}
+
+@test "cred-guard blocks Bash: sudo /usr/bin/vim (absolute path bypass)" {
+  run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'sudo /usr/bin/vim /etc/passwd')"
+  [ "$status" -eq 2 ]
+}
+
+@test "cred-guard blocks Bash: sudo /bin/su (absolute path bypass)" {
+  run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'sudo /bin/su -')"
+  [ "$status" -eq 2 ]
+}
+
+@test "cred-guard allows Bash: sudo with safe commands (fallocate, mkswap)" {
+  run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'sudo fallocate -l 4G /swapfile && sudo mkswap /swapfile')"
+  [ "$status" -eq 0 ]
+}
+
 @test "cred-guard errors loud if cred-guard.json missing" {
   CLAUDE_HOOKS_PATTERNS_DIR=/nonexistent run bash "$HOOKS_DIR/cred-guard.sh" <<< "$(bash_event 'ls')"
   [ "$status" -ne 0 ]

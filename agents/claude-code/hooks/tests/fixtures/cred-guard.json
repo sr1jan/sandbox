@@ -7,7 +7,10 @@
   "bash_patterns": [
     "\\bcat\\b.*\\.env",
     "\\bprintenv\\b",
-    "\\bsudo\\s+cat\\b",
+    "\\bsudo\\s+(/usr)?(/bin/)?cat\\b",
+    "\\bsudo\\s+(/usr)?(/bin/)?(ba)?sh\\b",
+    "\\bsudo\\s+(/usr)?(/bin/)?su\\b",
+    "\\bsudo\\s+(/usr)?(/bin/)?vim\\b",
     "python.*os\\.environ"
   ]
 }
