@@ -30,7 +30,8 @@ sudo apt-get install -y --no-install-recommends \
   sudo gosu less jq unzip \
   python3 python3-venv build-essential \
   openssh-client ca-certificates \
-  ruby
+  ruby \
+  ffmpeg
 
 # Node.js 22
 if ! command -v node &>/dev/null; then
@@ -43,6 +44,13 @@ if ! command -v uv &>/dev/null; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
   sudo mv ~/.local/bin/uv /usr/local/bin/uv
   sudo mv ~/.local/bin/uvx /usr/local/bin/uvx
+fi
+
+# yt-dlp (latest release binary — apt's version is often stale)
+if ! command -v yt-dlp &>/dev/null; then
+  sudo curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+    -o /usr/local/bin/yt-dlp
+  sudo chmod 755 /usr/local/bin/yt-dlp
 fi
 
 # tmuxinator
