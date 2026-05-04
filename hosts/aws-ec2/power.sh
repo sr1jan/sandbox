@@ -69,12 +69,14 @@ case "$ACTION" in
         sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
       done
       sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
-      sudo -u agent mkdir -p /home/agent/.claude/hooks/patterns
-      sudo cp /opt/sandbox/agents/claude-code/hooks/*.sh /home/agent/.claude/hooks/
-      sudo chmod +x /home/agent/.claude/hooks/*.sh
-      sudo cp /opt/sandbox/shared/patterns/*.json /home/agent/.claude/hooks/patterns/
-      sudo cp /opt/sandbox/agents/claude-code/CLAUDE.md /home/agent/.claude/CLAUDE.md
-      sudo chown -R agent:agent /home/agent/.claude/hooks /home/agent/.claude/CLAUDE.md
+      sudo bash -c '
+        install -d -o agent -g agent -m 775 /home/agent/.claude/hooks/patterns
+        cp /opt/sandbox/agents/claude-code/hooks/*.sh /home/agent/.claude/hooks/
+        chmod +x /home/agent/.claude/hooks/*.sh
+        cp /opt/sandbox/shared/patterns/*.json /home/agent/.claude/hooks/patterns/
+        cp /opt/sandbox/agents/claude-code/CLAUDE.md /home/agent/.claude/CLAUDE.md
+        chown -R agent:agent /home/agent/.claude/hooks /home/agent/.claude/CLAUDE.md
+      '
       sudo -u agent mkdir -p /home/agent/.config/tmuxinator
       for cfg in /opt/sandbox/shared/tmuxinator/*.yml; do
         sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
