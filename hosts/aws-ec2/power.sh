@@ -69,6 +69,7 @@ case "$ACTION" in
         sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
       done
       sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
+      sudo -u agent mkdir -p /home/agent/.claude/hooks/patterns
       sudo cp /opt/sandbox/agents/claude-code/hooks/*.sh /home/agent/.claude/hooks/
       sudo chmod +x /home/agent/.claude/hooks/*.sh
       sudo cp /opt/sandbox/shared/patterns/*.json /home/agent/.claude/hooks/patterns/
