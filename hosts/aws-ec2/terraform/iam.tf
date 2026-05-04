@@ -59,6 +59,30 @@ resource "aws_iam_user_policy" "sandbox" {
   policy = data.aws_iam_policy_document.sandbox.json
 }
 
+data "aws_iam_policy_document" "s3_internal_upload" {
+  statement {
+    sid    = "PutInternalAssets"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      "arn:aws:s3:::deepreel-assets/internal/*",
+    ]
+    condition {
+      test     = "NumericLessThanEquals"
+      variable = "s3:content-length-range"
+      values   = [var.s3_upload_max_bytes]
+    }
+  }
+}
+
+resource "aws_iam_user_policy" "s3_internal_upload" {
+  name   = "s3-internal-upload"
+  user   = aws_iam_user.sandbox.name
+  policy = data.aws_iam_policy_document.s3_internal_upload.json
+}
+
 resource "aws_iam_access_key" "sandbox" {
   user = aws_iam_user.sandbox.name
 }
