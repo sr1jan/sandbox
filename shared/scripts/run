@@ -25,6 +25,9 @@ fi
 # .env files from /workspace/<project>/ to /etc/devbox/locked/projects/<project>/
 CWD="$(pwd)"
 REL="${CWD#/workspace/}"
+# Map git worktrees to their base project so `cd .worktrees/feat/foo`
+# inherits the parent project's locked envs.
+REL="${REL%%/.worktrees/*}"
 LOCKED_DIR="/etc/devbox/locked/projects/$REL"
 for f in .env .env.local .env.secrets .env.development; do
   if [ -f "$LOCKED_DIR/$f" ]; then

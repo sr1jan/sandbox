@@ -31,7 +31,8 @@ sudo apt-get install -y --no-install-recommends \
   python3 python3-venv build-essential \
   openssh-client ca-certificates \
   ruby \
-  ffmpeg
+  ffmpeg \
+  bats
 
 # Node.js 22
 if ! command -v node &>/dev/null; then

@@ -36,7 +36,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   openssh-client ca-certificates iptables iptables-persistent \
   postgresql-client \
   ruby-full \
-  ffmpeg
+  ffmpeg \
+  bats
 
 # Node.js 22
 if ! command -v node &>/dev/null; then
