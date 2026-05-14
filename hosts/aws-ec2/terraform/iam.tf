@@ -78,6 +78,125 @@ resource "aws_iam_user_policy" "s3_internal_upload" {
   policy = data.aws_iam_policy_document.s3_internal_upload.json
 }
 
+data "aws_iam_policy_document" "ecs_exec" {
+  statement {
+    sid    = "ECSDiscover"
+    effect = "Allow"
+    actions = [
+      "ecs:ListClusters",
+      "ecs:ListTasks",
+      "ecs:DescribeTasks",
+      "ecs:DescribeServices",
+      "ecs:DescribeTaskDefinition",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "ECSExecute"
+    effect = "Allow"
+    actions = [
+      "ecs:ExecuteCommand",
+    ]
+    resources = [
+      "arn:aws:ecs:us-east-1:941377130901:cluster/dev-cluster",
+      "arn:aws:ecs:us-east-1:941377130901:cluster/prod-cluster",
+      "arn:aws:ecs:us-east-1:941377130901:task/dev-cluster/*",
+      "arn:aws:ecs:us-east-1:941377130901:task/prod-cluster/*",
+    ]
+  }
+
+  statement {
+    sid    = "SSMSession"
+    effect = "Allow"
+    actions = [
+      "ssmmessages:CreateControlChannel",
+      "ssmmessages:CreateDataChannel",
+      "ssmmessages:OpenControlChannel",
+      "ssmmessages:OpenDataChannel",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "ecs_exec" {
+  name   = "sandbox-ecs-exec-${terraform.workspace}"
+  path   = "/sandbox/"
+  policy = data.aws_iam_policy_document.ecs_exec.json
+}
+
+resource "aws_iam_user_policy_attachment" "ecs_exec" {
+  user       = aws_iam_user.sandbox.name
+  policy_arn = aws_iam_policy.ecs_exec.arn
+}
+
+data "aws_iam_policy_document" "ecs_deploy" {
+  statement {
+    sid    = "RegisterTaskDefinitions"
+    effect = "Allow"
+    actions = [
+      "ecs:RegisterTaskDefinition",
+      "ecs:DeregisterTaskDefinition",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "PassTaskRoles"
+    effect = "Allow"
+    actions = [
+      "iam:PassRole",
+    ]
+    resources = [
+      "arn:aws:iam::941377130901:role/AmazonECSTaskRole",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ecs-tasks.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid    = "UpdateAndInspectServices"
+    effect = "Allow"
+    actions = [
+      "ecs:UpdateService",
+      "ecs:DescribeServices",
+      "ecs:ListServices",
+    ]
+    resources = [
+      "arn:aws:ecs:us-east-1:941377130901:cluster/dev-cluster",
+      "arn:aws:ecs:us-east-1:941377130901:cluster/prod-cluster",
+      "arn:aws:ecs:us-east-1:941377130901:service/dev-cluster/*-staging",
+      "arn:aws:ecs:us-east-1:941377130901:service/dev-cluster/*-dev",
+      "arn:aws:ecs:us-east-1:941377130901:service/prod-cluster/*-prod",
+    ]
+  }
+
+  statement {
+    sid    = "InspectTaskDefinitions"
+    effect = "Allow"
+    actions = [
+      "ecs:DescribeTaskDefinition",
+      "ecs:ListTaskDefinitions",
+      "ecs:ListTaskDefinitionFamilies",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "ecs_deploy" {
+  name   = "sandbox-ecs-deploy-${terraform.workspace}"
+  path   = "/sandbox/"
+  policy = data.aws_iam_policy_document.ecs_deploy.json
+}
+
+resource "aws_iam_user_policy_attachment" "ecs_deploy" {
+  user       = aws_iam_user.sandbox.name
+  policy_arn = aws_iam_policy.ecs_deploy.arn
+}
+
 resource "aws_iam_access_key" "sandbox" {
   user = aws_iam_user.sandbox.name
 }
