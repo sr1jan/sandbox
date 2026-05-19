@@ -14,6 +14,16 @@ return {
       local telescope = require('telescope')
       local builtin = require('telescope.builtin')
 
+      -- nvim-treesitter `main` branch dropped the legacy parsers/configs API
+      -- that telescope's previewer still calls. Replace ts_highlighter with a
+      -- version that uses Neovim's built-in vim.treesitter.start instead.
+      local prev_utils = require('telescope.previewers.utils')
+      prev_utils.ts_highlighter = function(bufnr, ft)
+        if ft == nil or ft == '' then return false end
+        local lang = vim.treesitter.language.get_lang(ft) or ft
+        return pcall(vim.treesitter.start, bufnr, lang)
+      end
+
       telescope.setup({
         defaults = {
           -- This is the key setting
