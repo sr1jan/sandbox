@@ -62,6 +62,46 @@ case "$ACTION" in
     echo "[power] Pulling latest /opt/sandbox..."
     tailscale ssh "ubuntu@$HOSTNAME" 'cd /opt/sandbox && sudo git pull --ff-only 2>&1 | tail -3'
 
+    # Sync global secrets from local .secrets.env → VM /etc/devbox/locked/secrets.
+    # Maps TF_VAR_* names to the VM-side key names that bootstrap uses.
+    # Empty values are skipped by sync-secrets (won't wipe existing VM values).
+    SECRETS_ENV="$ROOT/workspaces/$WORKSPACE.secrets.env"
+    if [ -f "$SECRETS_ENV" ]; then
+      echo "[power] Syncing global secrets from $WORKSPACE.secrets.env..."
+      (
+        set -a; source "$SECRETS_ENV"; set +a
+        # Each line: TF_VAR_name=VM_KEY_NAME
+        SECRET_PAIRS="
+TF_VAR_anthropic_api_key=ANTHROPIC_API_KEY
+TF_VAR_database_staging_host=STAGING_DB_HOST
+TF_VAR_database_staging_name=STAGING_DB_NAME
+TF_VAR_database_staging_user=STAGING_DB_USER
+TF_VAR_database_staging_password=STAGING_DB_PASSWORD
+TF_VAR_database_replica_host=DATABASE_REPLICA_HOST
+TF_VAR_database_replica_name=DATABASE_REPLICA_NAME
+TF_VAR_database_replica_user=DATABASE_REPLICA_USER
+TF_VAR_database_replica_password=DATABASE_REPLICA_PASSWORD
+TF_VAR_gh_token_personal=GH_TOKEN_PERSONAL
+TF_VAR_gh_token_deepreel=GH_TOKEN_DEEPREEL
+"
+        payload=""
+        while IFS='=' read -r tf_var vm_key; do
+          [ -z "$tf_var" ] && continue
+          val="${!tf_var:-}"
+          if [ -n "$val" ]; then
+            payload="${payload}${vm_key}=${val}"$'\n'
+          fi
+        done <<< "$SECRET_PAIRS"
+        if [ -n "$payload" ]; then
+          printf '%s' "$payload" | tailscale ssh "ubuntu@$HOSTNAME" 'sudo sync-secrets'
+        else
+          echo "[power] No non-empty secrets found in $SECRETS_ENV, skipping."
+        fi
+      )
+    else
+      echo "[power] No secrets.env found at $SECRETS_ENV, skipping secret sync."
+    fi
+
     echo "[power] Re-installing shared scripts + tmuxinator configs..."
     tailscale ssh "ubuntu@$HOSTNAME" '
       set -e
