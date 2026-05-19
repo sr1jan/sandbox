@@ -19,7 +19,9 @@
 #   ${database_staging_user} ${database_staging_password}
 #   ${database_replica_host} ${database_replica_name}
 #   ${database_replica_user} ${database_replica_password}
-# GitHub auth: SSH keys vault-pulled by ./sync-ssh-keys.sh (no token).
+#   ${gh_token_personal} ${gh_token_deepreel}
+# GitHub auth: SSH keys vault-pulled by ./sync-ssh-keys.sh (git operations).
+# GitHub PATs are for `gh` CLI (actions, API, deployments).
 
 set -euo pipefail
 exec > >(tee -a /var/log/sandbox-bootstrap.log) 2>&1
@@ -167,6 +169,7 @@ install -m 755 "$SANDBOX_DIR/shared/scripts/lock-env"     /usr/local/bin/lock-en
 install -m 755 "$SANDBOX_DIR/shared/scripts/unlock-env"   /usr/local/bin/unlock-env
 install -m 755 "$SANDBOX_DIR/shared/scripts/sync-secrets" /usr/local/bin/sync-secrets
 install -m 755 "$SANDBOX_DIR/shared/scripts/tx"           /usr/local/bin/tx
+install -m 755 "$SANDBOX_DIR/shared/scripts/gh"           /usr/local/bin/gh
 install -m 440 "$SANDBOX_DIR/shared/sudoers.d/agent"      /etc/sudoers.d/agent
 
 # Canonical paths: shared/scripts/run reads /etc/devbox/locked/secrets and
@@ -198,6 +201,8 @@ DATABASE_REPLICA_HOST=${database_replica_host}
 DATABASE_REPLICA_NAME=${database_replica_name}
 DATABASE_REPLICA_USER=${database_replica_user}
 DATABASE_REPLICA_PASSWORD=${database_replica_password}
+GH_TOKEN_PERSONAL=${gh_token_personal}
+GH_TOKEN_DEEPREEL=${gh_token_deepreel}
 __SANDBOX_SECRETS_EOF__
 
 # --- Egress allowlist at the host level (iptables) ---
@@ -283,6 +288,23 @@ install -m 644 -o agent -g agent \
   "$SANDBOX_DIR/shared/dotfiles/git/gitconfig.personal" /home/agent/.gitconfig.personal
 install -m 644 -o agent -g agent \
   "$SANDBOX_DIR/shared/dotfiles/git/gitconfig.deepreel" /home/agent/.gitconfig.deepreel
+
+# --- GitHub PATs for gh CLI (directory-aware wrapper) ---
+# Same pattern as SSH keys: tokens from the root-only secrets vault are
+# copied to agent-readable files so the gh wrapper can read them without
+# sudo. Skipped silently if either token is empty (not set by operator).
+echo "[bootstrap] Installing gh CLI tokens + wrapper for agent..."
+install -d -o agent -g agent -m 700 /home/agent/.config/gh/tokens
+if [ -n "${gh_token_personal}" ]; then
+  printf '%s' '${gh_token_personal}' > /home/agent/.config/gh/tokens/personal
+  chown agent:agent /home/agent/.config/gh/tokens/personal
+  chmod 600 /home/agent/.config/gh/tokens/personal
+fi
+if [ -n "${gh_token_deepreel}" ]; then
+  printf '%s' '${gh_token_deepreel}' > /home/agent/.config/gh/tokens/deepreel
+  chown agent:agent /home/agent/.config/gh/tokens/deepreel
+  chmod 600 /home/agent/.config/gh/tokens/deepreel
+fi
 
 # --- Clone work repos (deepreel) into /workspace/core/ ---
 # --- Clone personal repos (fun) into /workspace/fun/ ---
