@@ -183,6 +183,8 @@ resource "aws_instance" "sandbox" {
     database_replica_name     = var.database_replica_name
     database_replica_user     = var.database_replica_user
     database_replica_password = var.database_replica_password
+    gh_token_personal         = var.gh_token_personal
+    gh_token_deepreel         = var.gh_token_deepreel
   })
 
   # Force replacement on user-data change so a re-apply re-bootstraps cleanly.

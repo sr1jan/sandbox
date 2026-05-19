@@ -178,3 +178,19 @@ variable "database_replica_password" {
   sensitive   = true
   default     = ""
 }
+
+# ---- GitHub PATs (for gh CLI — SSH keys handle git operations) ----
+
+variable "gh_token_personal" {
+  description = "GitHub PAT for the personal account (sr1jan). Enables `gh` CLI in /workspace/fun/. Fine-grained token with repo + actions scopes recommended."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "gh_token_deepreel" {
+  description = "GitHub PAT for the work account (sr1jann). Enables `gh` CLI in /workspace/core/. Fine-grained token with repo + actions scopes recommended."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

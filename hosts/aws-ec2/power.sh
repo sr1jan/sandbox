@@ -65,7 +65,7 @@ case "$ACTION" in
     echo "[power] Re-installing shared scripts + tmuxinator configs..."
     tailscale ssh "ubuntu@$HOSTNAME" '
       set -e
-      for s in run lock-env unlock-env sync-secrets with_creds tx; do
+      for s in run lock-env unlock-env sync-secrets with_creds tx gh; do
         sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
       done
       sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
@@ -107,6 +107,19 @@ case "$ACTION" in
             sudo cat "/etc/devbox/locked/keys/$g" \
               | sudo -u agent gpg --batch --import 2>&1 \
               | grep -vE "secret key imported|already in secret keyring" || true
+          fi
+        done
+      fi
+      sudo install -d -o agent -g agent -m 700 /home/agent/.config/gh/tokens
+      if sudo test -f /etc/devbox/locked/secrets; then
+        for pair in "GH_TOKEN_PERSONAL personal" "GH_TOKEN_DEEPREEL deepreel"; do
+          key="${pair%% *}"
+          file="${pair##* }"
+          val="$(sudo grep -oP "^export ${key}=\x27\K[^\x27]+" /etc/devbox/locked/secrets 2>/dev/null || true)"
+          if [ -n "$val" ]; then
+            printf "%s" "$val" | sudo tee "/home/agent/.config/gh/tokens/$file" > /dev/null
+            sudo chown agent:agent "/home/agent/.config/gh/tokens/$file"
+            sudo chmod 600 "/home/agent/.config/gh/tokens/$file"
           fi
         done
       fi

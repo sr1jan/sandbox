@@ -1,0 +1,28 @@
+#!/bin/bash
+# Directory-aware gh wrapper — mirrors git's includeIf approach.
+# Repos under /workspace/fun/ use the personal GitHub PAT; repos under
+# /workspace/core/ use the deepreel PAT. Falls through to plain gh
+# (no GH_TOKEN) if outside both trees or if the token file is missing.
+#
+# Token files are written by bootstrap (and refreshed by power.sh sync)
+# to ~/.config/gh/tokens/{personal,deepreel}, owned by agent:600 — same
+# pattern as SSH keys in ~/.ssh/.
+#
+# Installed to /usr/local/bin/gh, shadowing /usr/bin/gh.
+
+set -euo pipefail
+
+TOKEN_DIR="${HOME}/.config/gh/tokens"
+
+case "$PWD" in
+  /workspace/fun/*)  token_file="$TOKEN_DIR/personal" ;;
+  /workspace/core/*) token_file="$TOKEN_DIR/deepreel" ;;
+  *)                 token_file="" ;;
+esac
+
+if [ -n "$token_file" ] && [ -r "$token_file" ]; then
+  export GH_TOKEN
+  GH_TOKEN="$(cat "$token_file")"
+fi
+
+exec /usr/bin/gh "$@"
