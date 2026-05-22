@@ -197,6 +197,58 @@ resource "aws_iam_user_policy_attachment" "ecs_deploy" {
   policy_arn = aws_iam_policy.ecs_deploy.arn
 }
 
+data "aws_iam_policy_document" "ecr" {
+  statement {
+    sid    = "ECRAuth"
+    effect = "Allow"
+    actions = [
+      "ecr:GetAuthorizationToken",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "ECRPushPull"
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:CompleteLayerUpload",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:InitiateLayerUpload",
+      "ecr:PutImage",
+      "ecr:UploadLayerPart",
+    ]
+    resources = [
+      "arn:aws:ecr:us-east-1:941377130901:repository/*",
+    ]
+  }
+
+  statement {
+    sid    = "ECRInspect"
+    effect = "Allow"
+    actions = [
+      "ecr:DescribeRepositories",
+      "ecr:DescribeImages",
+      "ecr:ListImages",
+    ]
+    resources = [
+      "arn:aws:ecr:us-east-1:941377130901:repository/*",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "ecr" {
+  name   = "sandbox-ecr-${terraform.workspace}"
+  path   = "/sandbox/"
+  policy = data.aws_iam_policy_document.ecr.json
+}
+
+resource "aws_iam_user_policy_attachment" "ecr" {
+  user       = aws_iam_user.sandbox.name
+  policy_arn = aws_iam_policy.ecr.arn
+}
+
 resource "aws_iam_access_key" "sandbox" {
   user = aws_iam_user.sandbox.name
 }
