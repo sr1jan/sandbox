@@ -8,7 +8,7 @@ vpc_cidr    = "10.100.0.0/16"
 subnet_cidr = "10.100.1.0/24"
 
 instance_type = "t4g.large"   # Graviton ARM (matches local M1 Mac arch; ~20% cheaper than t3.large)
-ebs_size_gb   = 40
+ebs_size_gb   = 80
 
 # Leave null to use AWS-managed aws/ebs key, or set to "alias/sandbox-ebs"
 # after creating a customer-managed key with logged usage.
