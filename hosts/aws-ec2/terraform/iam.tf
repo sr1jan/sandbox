@@ -84,6 +84,7 @@ data "aws_iam_policy_document" "ecs_exec" {
     effect = "Allow"
     actions = [
       "ecs:ListClusters",
+      "ecs:ListServices",
       "ecs:ListTasks",
       "ecs:DescribeTasks",
       "ecs:DescribeServices",
