@@ -75,9 +75,9 @@ variable "cloudwatch_log_group_arns" {
 }
 
 variable "enable_ssm_break_glass" {
-  description = "When true, attach the SSM-only IAM instance profile at create time (see ADR 0003). Default: false — attach on demand."
+  description = "Attach the SSM-only IAM instance profile at create time so break-glass works without a reboot (see ADR 0004, superseding the attach-on-demand path in ADR 0003). Set false only to restore the strict no-profile posture of ADR 0002 constraint 2."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "deepreel_repo_urls" {
