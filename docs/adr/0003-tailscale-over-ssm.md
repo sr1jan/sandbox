@@ -1,6 +1,6 @@
 # 0003 — Tailscale over SSM for remote access
 
-**Status**: Accepted
+**Status**: Accepted (break-glass mechanism superseded by [ADR 0004](0004-always-attached-ssm-break-glass.md))
 **Date**: 2026-04-24
 
 ## Context

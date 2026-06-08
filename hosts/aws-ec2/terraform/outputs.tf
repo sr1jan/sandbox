@@ -52,20 +52,8 @@ output "connection_instructions" {
     tailscale ssh ubuntu@${local.tailnet_hostname}        # admin (sudo-capable)
     tailscale ssh agent@${local.tailnet_hostname}         # locked-down agent user
 
-    # Break-glass via SSM (attach the SSM profile, THEN reboot — see note):
-    aws ec2 associate-iam-instance-profile \\
-      --instance-id ${aws_instance.sandbox.id} \\
-      --iam-instance-profile Name=${aws_iam_instance_profile.ssm_break_glass.name}
-    # The SSM agent boots without creds and will NOT re-register when the
-    # profile is attached later (it falls into Default Host Management, which
-    # is not configured for this account). A reboot makes it start WITH creds:
-    aws ec2 reboot-instances --instance-ids ${aws_instance.sandbox.id}
-    # Wait ~1-2 min for the agent to register, then:
+    # Break-glass via SSM (profile is always attached — ADR 0004, so this
+    # works any time Tailscale is down, no attach/reboot needed):
     aws ssm start-session --target ${aws_instance.sandbox.id}
-    # When done:
-    aws ec2 disassociate-iam-instance-profile \\
-      --association-id $(aws ec2 describe-iam-instance-profile-associations \\
-        --filters Name=instance-id,Values=${aws_instance.sandbox.id} \\
-        --query 'IamInstanceProfileAssociations[0].AssociationId' --output text)
   EOT
 }

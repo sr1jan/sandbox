@@ -138,9 +138,10 @@ resource "aws_instance" "sandbox" {
   vpc_security_group_ids      = [aws_security_group.sandbox.id]
   associate_public_ip_address = true
 
-  # ADR 0002 constraint 2: no IAM instance profile attached by default.
-  # Operators can attach the SSM-only profile (see iam.tf) on demand
-  # for break-glass access.
+  # ADR 0004 (supersedes the break-glass part of ADR 0003): attach the
+  # SSM-only profile at boot so break-glass works instantly. Attach-on-demand
+  # was abandoned — the SSM agent won't register a profile added post-boot
+  # without a reboot. The profile grants SSM perms only (no exfil/prod value).
   iam_instance_profile = var.enable_ssm_break_glass ? aws_iam_instance_profile.ssm_break_glass.name : null
 
   metadata_options {
