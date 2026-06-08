@@ -215,7 +215,8 @@ iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 443 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 80 -j ACCEPT   # Ubuntu APT mirrors
 iptables -A OUTPUT -p tcp --dport 5432 -j ACCEPT
-iptables -A OUTPUT -p udp --dport 41641 -j ACCEPT
+iptables -A OUTPUT -p udp --dport 41641 -j ACCEPT  # Tailscale WireGuard (direct)
+iptables -A OUTPUT -p udp --dport 3478  -j ACCEPT  # Tailscale STUN/DERP-over-UDP — required for NAT traversal & netcheck; without it direct paths can't rebuild after a network change and Tailscale falls back to a flaky relay
 iptables -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 iptables -P OUTPUT DROP
 netfilter-persistent save
