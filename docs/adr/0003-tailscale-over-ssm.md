@@ -51,3 +51,24 @@ Use Tailscale for primary access, with SSM Session Manager available as a break-
 - The tailnet's SSO identity (`srijan@deepreel.com`) becomes a single point of trust for access. 2FA must be enforced on that SSO; this is a recurring operational responsibility.
 - Terraform provisions a `tailscale_tailnet_key` via the Tailscale Terraform provider; that provider requires an OAuth client ID/secret, stored in the workspace secrets env file (not in state).
 - Future A+C migration: additional devs get invited to the same tailnet, their VMs are tagged similarly, ACLs gain entries per-user. No structural change.
+
+## Addendum (2026-06-08) — attach-on-demand break-glass does not work as written
+
+During a Tailscale outage we exercised the break-glass path and found the
+default (attach-on-demand) option is broken: the SSM agent starts at boot with
+no instance profile, falls back to **Default Host Management** (not configured
+for account `941377130901`, so it errors `Systems Manager's instance management
+role is not configured`), and does **not** re-register when the profile is
+attached later. SSM only came online after an `aws ec2 reboot-instances`, which
+restarts the agent *with* the now-attached profile's IMDS credentials.
+
+Implications:
+
+- The on-demand runbook now includes a mandatory reboot step (see the
+  `connection_instructions` output). A reboot is disruptive to in-flight agent
+  tmux sessions, so on-demand break-glass is effectively "reboot to recover."
+- Recommended fix if this recurs: switch to the **always-attached SSM-only
+  profile** (`enable_ssm_break_glass = true`), as this ADR already permits. The
+  agent then boots with creds and `start-session` works instantly, no reboot.
+  Alternatively, configure account-level Default Host Management (DHMC) so the
+  agent registers with a default role and no profile attach is needed at all.
