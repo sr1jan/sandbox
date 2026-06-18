@@ -10,6 +10,7 @@
 #   ./power.sh sync           # reconcile box without replacing it:
 #                             #  - git pull /opt/sandbox (latest scripts)
 #                             #  - reinstall scripts + tmuxinator configs
+#                             #  - sync bundled skills into agent's ~/.claude
 #                             #  - clone any tfvars repos missing from
 #                             #    /workspace/{core,fun}/
 #
@@ -117,6 +118,17 @@ TF_VAR_gh_token_deepreel=GH_TOKEN_DEEPREEL
         sudo install -m 644 -o agent -g agent "$p" /home/agent/.claude/hooks/patterns/
       done
       sudo install -m 644 -o agent -g agent /opt/sandbox/agents/claude-code/CLAUDE.md /home/agent/.claude/CLAUDE.md
+      # Bundled skills (agents/claude-code/skills/*). Mirrors install.sh but
+      # uses cp -rT so re-running sync overwrites in place (no nested dirs).
+      # Skip helper dirs starting with underscore (e.g. _common).
+      sudo install -d -o agent -g agent -m 755 /home/agent/.claude/skills
+      for skill_dir in /opt/sandbox/agents/claude-code/skills/*/; do
+        [ -d "$skill_dir" ] || continue
+        skill_name="$(basename "$skill_dir")"
+        case "$skill_name" in _*) continue;; esac
+        sudo cp -rT "$skill_dir" "/home/agent/.claude/skills/$skill_name"
+        sudo chown -R agent:agent "/home/agent/.claude/skills/$skill_name"
+      done
       sudo -u agent mkdir -p /home/agent/.config/tmuxinator
       for cfg in /opt/sandbox/shared/tmuxinator/*.yml; do
         sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
