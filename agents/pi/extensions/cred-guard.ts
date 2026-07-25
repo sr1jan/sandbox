@@ -14,8 +14,8 @@
  * Place in ~/.pi/agent/extensions/ for global protection across all projects.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { isToolCallEventType } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -32,6 +32,8 @@ function loadPatterns(): CredGuardPatterns {
 	const candidates = [
 		"/home/agent/.pi/agent/patterns/cred-guard.json",
 		join(__dirname, "..", "patterns", "cred-guard.json"),
+		// Repo checkout (local dev / tests): extensions/ → repo root → shared/
+		join(__dirname, "..", "..", "..", "shared", "patterns", "cred-guard.json"),
 	];
 	for (const path of candidates) {
 		try {
