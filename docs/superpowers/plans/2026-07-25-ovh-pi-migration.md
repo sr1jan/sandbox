@@ -13,7 +13,7 @@
 - Personal-projects-only scope: no DeepReel repos, DB vars, or AWS deploy creds on the new host. `/workspace/fun` only (no `/workspace/core`).
 - The five isolation layers must survive: root:600 locked secrets, `run`-only sudoers, cred-guard, redactor, egress allowlist (443/80/53/41641-udp only — **no 5432**; no DB access in scope).
 - Tailscale is the only ingress. Bootstrap must not lock itself out: INPUT DROP is applied only after `tailscale status` reports healthy.
-- Don't modify `hosts/aws-ec2/` — it must keep working unchanged until its decommission (~2026-07-31).
+- Don't modify `hosts/aws-ec2/` — it must keep working unchanged until its decommission (on/after 2026-08-14, not before).
 - `shared/patterns/*.json` changes must stay additive (the live AWS box re-installs them via `power.sh sync`).
 - All shell scripts pass `bash -n` and `shellcheck` (warnings acceptable, errors not).
 - **Hook caveat for the executing engineer:** this session runs inside the sandbox — the cred-guard hook blocks `Read`/`cat` on paths matching `secrets?\.` (including `shared/secrets.example`). Use `git -C /workspace/fun/sandbox show HEAD:shared/secrets.example` to view it and the `Write` tool to replace it wholesale.
@@ -967,7 +967,7 @@ Keys live in `/etc/devbox/locked/secrets`; the catalog is
 Day-one: DeepSeek PAYG. Subscription trial (GLM Pro vs Kimi) decided
 per the design doc, ~Sept 2026.
 
-## AWS decommission checklist (before 2026-07-31)
+## AWS decommission checklist (on/after 2026-08-14 — NOT before)
 
 - [ ] Migrate any personal state off the AWS box (dotfile drift, in-flight
       worktrees, `~/.claude` history worth keeping)
@@ -975,7 +975,7 @@ per the design doc, ~Sept 2026.
       then source workspace secrets and `terraform destroy -var-file=...`
 - [ ] Confirm in AWS console: instance, EBS volume, EIP, IAM sandbox user gone
 - [ ] Remove the old device from the Tailscale admin console
-- [ ] Cancel Claude Max before the renewal date
+- [ ] Claude Max auto-cancels by 2026-08-14 — verify no renewal charge
 - [ ] Downgrade/rotate any DeepReel-scoped tokens still in ~/.sandbox-keys
 ```
 

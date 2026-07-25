@@ -3,8 +3,10 @@
 **Date:** 2026-07-25
 **Status:** Approved (pending spec review)
 **Context:** Company financing for the current setup (AWS EC2 sandbox +
-Claude Code on Claude Max $200/mo) ends 2026-07-31. Migrate to a
-personally-financed, cost-optimized setup before then.
+Claude Code on Claude Max $200/mo) is ending: the Claude Max sub
+auto-cancels by 2026-08-14, and the AWS box is to be destroyed no
+earlier than 2026-08-14. Migrate to a personally-financed,
+cost-optimized setup with the new box proven out before that date.
 
 ## Goal
 
@@ -121,10 +123,12 @@ Unchanged in principle — the five isolation layers port as-is:
 5. End-to-end Pi test: cred-guard blocks `cat .env`, redactor scrubs a
    planted dummy key, agent completes a real task on a personal repo,
    cost shows in Pi footer.
-6. Parallel-run both boxes a few days; migrate any personal state
+6. Parallel-run both boxes (until ~Aug 14); migrate any personal state
    (dotfile drift, in-flight worktrees) from the AWS box.
-7. Before 2026-07-31: `terraform destroy` the AWS workspace (instance,
-   EBS, EIP, IAM user, Tailscale device cleanup); cancel Claude Max.
+7. On/after 2026-08-14 (not before): `terraform destroy` the AWS
+   workspace (instance, EBS, EIP, IAM user, Tailscale device cleanup).
+   Claude Max auto-cancels by 2026-08-14 — verify no renewal charge,
+   no manual cancellation needed.
 8. Aug–Sep: trial GLM Pro and/or Kimi Allegretto against Pi's cost
    data; commit to whichever earns it (z.ai 30% promo + 1x off-peak
    both run through ~end of September — decide before then).
