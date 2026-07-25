@@ -45,3 +45,33 @@ load test_helper
   [ "$status" -ne 0 ]
   [[ "$output" =~ "redactor.json" ]]
 }
+
+# The tests below run against the REAL pattern file (shared/patterns/),
+# not the minimal fixture — they guard the production pattern list.
+
+@test "redactor replaces OpenRouter key (real patterns)" {
+  key="sk-or-v1-$(printf 'a%.0s' {1..64})"
+  CLAUDE_HOOKS_PATTERNS_DIR="$HOOKS_DIR/../../../shared/patterns" \
+    run bash "$HOOKS_DIR/redactor.sh" <<< "$(post_event "or key: $key")"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "[REDACTED]" ]]
+  [[ ! "$output" =~ "$key" ]]
+}
+
+@test "redactor replaces z.ai id.secret key (real patterns)" {
+  key="0123456789abcdef0123456789abcdef.a1B2c3D4e5F6g7H8"
+  CLAUDE_HOOKS_PATTERNS_DIR="$HOOKS_DIR/../../../shared/patterns" \
+    run bash "$HOOKS_DIR/redactor.sh" <<< "$(post_event "zai: $key")"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "[REDACTED]" ]]
+  [[ ! "$output" =~ "$key" ]]
+}
+
+@test "redactor replaces 32-char sk- key (real patterns)" {
+  key="sk-abcdefghij0123456789abcdefghij01"
+  CLAUDE_HOOKS_PATTERNS_DIR="$HOOKS_DIR/../../../shared/patterns" \
+    run bash "$HOOKS_DIR/redactor.sh" <<< "$(post_event "ds: $key")"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "[REDACTED]" ]]
+  [[ ! "$output" =~ "$key" ]]
+}
