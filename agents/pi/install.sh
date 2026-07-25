@@ -9,6 +9,7 @@
 # Optional env:
 #   - AGENT_HOME   (default: /home/agent)
 #   - AGENT_USER   (default: agent)
+#   - PI_PACKAGE   (default: @earendil-works/pi-coding-agent)
 #
 # Usage (called from a host bootstrap):
 #   SANDBOX_DIR=/path/to/sandbox bash agents/pi/install.sh
@@ -18,7 +19,7 @@ set -euo pipefail
 : "${SANDBOX_DIR:?SANDBOX_DIR must point at the sandbox repo root}"
 : "${AGENT_HOME:=/home/agent}"
 : "${AGENT_USER:=agent}"
-: "${PI_PROJECTS_DIR:=$HOME/projects}"
+: "${PI_PACKAGE:=@earendil-works/pi-coding-agent}"
 
 echo "[pi-install] Setting up Pi extensions, skills, and patterns..."
 
@@ -32,32 +33,39 @@ sudo cp -r "$SANDBOX_DIR/agents/pi/skills/"* "$AGENT_HOME/.pi/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.pi/agent/patterns/"
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.pi"
 
-echo "[pi-install] Cloning and building pi-mono..."
-mkdir -p "$PI_PROJECTS_DIR"
-if [ ! -d "$PI_PROJECTS_DIR/pi-mono" ]; then
-  git clone https://github.com/badlogic/pi-mono.git "$PI_PROJECTS_DIR/pi-mono"
+echo "[pi-install] Installing $PI_PACKAGE into /opt/pi..."
+sudo mkdir -p /opt/pi
+if [ ! -f /opt/pi/package.json ]; then
+  ( cd /opt/pi && sudo npm init -y >/dev/null )
 fi
-( cd "$PI_PROJECTS_DIR/pi-mono" && npm install && npm run build )
+( cd /opt/pi && sudo npm install "$PI_PACKAGE" )
 
-PI_BIN="$PI_PROJECTS_DIR/pi-mono/packages/coding-agent/dist/cli/index.js"
+PI_BIN="/opt/pi/node_modules/.bin/pi"
+[ -x "$PI_BIN" ] || { echo "[pi-install] ERROR: $PI_BIN not found after install" >&2; exit 1; }
 
-# Install `pi` as a real binary on PATH (works in interactive AND
-# non-interactive shells). Wraps via `sudo run` so ANTHROPIC_API_KEY (and
-# any other creds) are sourced from /etc/devbox/locked/secrets at invocation
-# time — never persisted in the agent's env or .bashrc.
+# Install `pi` wrapper on PATH. Wraps via `sudo run` so provider API keys
+# are sourced from /etc/devbox/locked/secrets at invocation time — never
+# persisted in the agent's env or .bashrc. Pi's built-in providers pick
+# them up from the process env:
+#   DEEPSEEK_API_KEY   (deepseek — PAYG default)
+#   ZAI_API_KEY        (zai — GLM Coding Plan endpoint)
+#   KIMI_API_KEY       (kimi-coding — Kimi membership endpoint)
+#   MOONSHOT_API_KEY   (moonshotai — Moonshot PAYG API)
+#   OPENROUTER_API_KEY (openrouter — BYOK fallback router)
+#   ANTHROPIC_API_KEY  (anthropic — optional escalation)
 sudo tee /usr/local/bin/pi >/dev/null <<EOF
 #!/bin/bash
-exec sudo /usr/local/bin/run node $PI_BIN "\$@"
+exec sudo /usr/local/bin/run $PI_BIN "\$@"
 EOF
 sudo chmod 755 /usr/local/bin/pi
 
 # PATH addition for /home/agent/.local/bin (user-installed pip/cargo bins).
-# Distinct concern from the pi alias above; safe to keep.
+# Distinct concern from the pi wrapper above; safe to keep.
 if ! sudo -u "$AGENT_USER" grep -q "/home/agent/.local/bin" "$AGENT_HOME/.bashrc" 2>/dev/null; then
   echo 'export PATH="/home/agent/.local/bin:$PATH"' | sudo tee -a "$AGENT_HOME/.bashrc" >/dev/null
   sudo chown "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.bashrc"
 fi
 
 echo "[pi-install] Done."
-echo "[pi-install] Pi reads ANTHROPIC_API_KEY from /etc/devbox/locked/secrets via 'sudo run'."
-echo "[pi-install] Populate it with: echo 'ANTHROPIC_API_KEY=...' | sudo sync-secrets"
+echo "[pi-install] Provider keys live in /etc/devbox/locked/secrets (sudo sync-secrets)."
+echo "[pi-install] Models: Pi's built-in catalog (zai / kimi-coding / deepseek / moonshotai / openrouter)."
