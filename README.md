@@ -156,6 +156,8 @@ sandbox/
 │   └── pi/             # TS extensions for Pi
 │
 ├── hosts/
+│   ├── ovh-vps/        # bootstrap.sh, sync.sh, connect.sh, ship-keys.sh,
+│   │                   # ship-project-env.sh, host.conf (no terraform)
 │   ├── aws-ec2/        # terraform/, bootstrap.sh.tpl, power.sh, connect.sh,
 │   │                   # rebuild.sh, sync-aws-keys.sh, sync-ssh-keys.sh,
 │   │                   # sync-project-env.sh, seed-from-dump.sh
@@ -171,7 +173,7 @@ sandbox/
 ## Supported
 
 - **Agents**: Claude Code (primary, YOLO mode safe by construction), Pi
-- **Hosts**: `aws-ec2` (production sandbox), `gcp-vm`, `docker-mac`
+- **Hosts**: `ovh-vps` (personal sandbox, Mumbai), `aws-ec2` (deepreel sandbox — decommissioning Aug 2026), `gcp-vm`, `docker-mac`
 
 ## Mobile access
 
