@@ -9,7 +9,9 @@ portal and reconciled with `sync.sh`. Design:
 
 1. Order **VPS-2, Mumbai, Ubuntu 24.04** at ovhcloud.com/en-in/vps/
    (in-place upgrade to VPS-3 available later if cramped).
-2. Mint a Tailscale auth key (reusable=no, ephemeral=no, tag as usual).
+2. Mint a Tailscale auth key (reusable=no, ephemeral=no, tag as usual)
+   — from the **personal** tailnet (personal-email account), NOT the
+   deepreel-email tailnet, which dies with the AWS box.
 3. First SSH in with the OVH-provided key, then:
 
        sudo git clone https://github.com/sr1jan/sandbox.git /opt/sandbox
@@ -71,6 +73,8 @@ per the design doc, ~Sept 2026.
 - [ ] `cd hosts/aws-ec2/terraform && terraform workspace select <ws>`
       then source workspace secrets and `terraform destroy -var-file=...`
 - [ ] Confirm in AWS console: instance, EBS volume, EIP, IAM sandbox user gone
-- [ ] Remove the old device from the Tailscale admin console
+- [ ] Remove the old device from the Tailscale admin console; abandon the
+      deepreel-email tailnet entirely (personal devices switched to the
+      personal tailnet)
 - [ ] Claude Max auto-cancels by 2026-08-14 — verify no renewal charge
 - [ ] Downgrade/rotate any DeepReel-scoped tokens still in ~/.sandbox-keys
