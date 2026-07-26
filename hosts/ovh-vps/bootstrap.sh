@@ -126,6 +126,7 @@ sudo iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
 sudo iptables -A OUTPUT -p tcp --dport 443 -j ACCEPT
 sudo iptables -A OUTPUT -p tcp --dport 80 -j ACCEPT   # APT mirrors
 sudo iptables -A OUTPUT -p udp --dport 41641 -j ACCEPT  # Tailscale
+sudo iptables -A OUTPUT -p udp --dport 3478 -j ACCEPT   # STUN (Tailscale NAT traversal)
 sudo iptables -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 sudo iptables -P OUTPUT DROP
 # Ingress: lo, established, tailscale0 only. No public SSH (OVH has no
