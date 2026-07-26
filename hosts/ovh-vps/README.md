@@ -9,9 +9,11 @@ portal and reconciled with `sync.sh`. Design:
 
 1. Order **VPS-2, Mumbai, Ubuntu 24.04** at ovhcloud.com/en-in/vps/
    (in-place upgrade to VPS-3 available later if cramped).
-2. Mint a Tailscale auth key (reusable=no, ephemeral=no, tag as usual)
-   — from the **personal** tailnet (personal-email account), NOT the
-   deepreel-email tailnet, which dies with the AWS box.
+2. Mint a Tailscale auth key (reusable=no, ephemeral=no, tagged
+   `tag:sandbox`) — from the **personal** tailnet (personal-email
+   account), NOT the deepreel-email tailnet, which dies with the AWS
+   box. The personal tailnet's ACL defines `tag:sandbox` + an ssh rule
+   allowing members → tag as `ubuntu`/`agent`.
 3. First SSH in with the OVH-provided key, then:
 
        sudo git clone https://github.com/sr1jan/sandbox.git /opt/sandbox
