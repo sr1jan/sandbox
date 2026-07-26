@@ -75,8 +75,9 @@ per the design doc, ~Sept 2026.
 - [ ] `cd hosts/aws-ec2/terraform && terraform workspace select <ws>`
       then source workspace secrets and `terraform destroy -var-file=...`
 - [ ] Confirm in AWS console: instance, EBS volume, EIP, IAM sandbox user gone
-- [ ] Remove the old device from the Tailscale admin console; abandon the
-      deepreel-email tailnet entirely (personal devices switched to the
-      personal tailnet)
+- [ ] Remove the old device from the Tailscale admin console; revoke the
+      "terraform-sandbox" OAuth client (Trust credentials) there; abandon
+      the deepreel-email tailnet entirely (personal devices switched to
+      the personal tailnet)
 - [ ] Claude Max auto-cancels by 2026-08-14 — verify no renewal charge
 - [ ] Downgrade/rotate any DeepReel-scoped tokens still in ~/.sandbox-keys
