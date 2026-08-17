@@ -1,0 +1,25 @@
+#!/bin/bash
+# hx — launch herdr as the agent user, regardless of who you are.
+#
+# The herdr counterpart to `tx`. Same footgun it removes: starting the
+# multiplexer as ubuntu would leave panes running as ubuntu, which can't
+# write into /workspace/fun (owned by agent) and doesn't pick up agent's
+# dotfiles. Pi itself always lands on the agent user via `sudo run`
+# (see shared/scripts/run), but the surrounding shells wouldn't.
+#
+# herdr keeps its own persistent server and session model, so unlike tx
+# there is no tmuxinator project name to default to — arguments pass
+# straight through.
+#
+# Usage:
+#   hx                       # launch or attach the persistent session
+#   hx --session scratch     # named session
+#   hx agent list            # any herdr subcommand
+
+set -euo pipefail
+
+if [ "$(id -un)" != "agent" ]; then
+  exec sudo -u agent -i herdr "$@"
+fi
+
+exec herdr "$@"

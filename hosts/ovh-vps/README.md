@@ -48,7 +48,36 @@ Run as agent (`./connect.sh agent`):
 | `./ship-keys.sh` | Re-ship SSH/GPG keys after rotation |
 | `./ship-project-env.sh <dir> <target>` | Ship a project's locked dotfile secrets |
 | on box: `pi` | Pi with provider keys injected per-invocation |
-| on box: `tx fun` | tmuxinator personal layout |
+| on box: `tx` | tmux/tmuxinator layout (default multiplexer) |
+| on box: `hx` | herdr — alternative, agent-aware multiplexer |
+
+## Multiplexers
+
+Both are installed; pick per session. Each wrapper forces the **agent**
+user so panes can write to `/workspace/fun` and pick up agent's dotfiles.
+
+**`tx` — tmux + tmuxinator (default).** Layout lives at
+`hosts/ovh-vps/tmuxinator/dev.yml`: an `admin` window (`sudo -i` for
+`sync-secrets`), a `sandbox` window running `pi`, and plain shells for
+`fintrack` and `wingman`. Plain `tx` starts it (the project is named
+`dev`, which is `tx`'s default).
+
+**`hx` — [herdr](https://herdr.dev) (alternative).** A Rust multiplexer
+built for coding agents: tmux's pane/tab/session model plus a sidebar
+showing each agent's state (working / idle / blocked), and sessions that
+survive disconnects. Bootstrap installs the binary to `/usr/local/bin`
+and runs `herdr integration install pi`, which drops
+`herdr-agent-state.ts` into `~agent/.pi/agent/extensions/` next to our
+cred-guard and redactor — so Pi reports state via lifecycle hooks rather
+than screen-scraping. Useful when several agent sessions run at once and
+you want to see which one is blocked on input.
+
+Security notes: herdr is client/server over a **Unix socket**, so it adds
+no listening port and doesn't widen the Tailscale-only ingress. Its
+remote mode (`herdr --remote ssh://…`) tunnels over SSH, which works
+through Tailscale SSH without opening anything. Config (optional) lives
+at `~/.config/herdr/config.toml`; `herdr --default-config` prints the
+documented defaults, `herdr agent list` shows what it currently detects.
 
 ## Model providers
 
