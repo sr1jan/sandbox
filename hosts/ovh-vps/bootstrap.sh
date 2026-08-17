@@ -141,13 +141,38 @@ sudo iptables -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
 sudo iptables -P OUTPUT DROP
 # Ingress: lo, established, tailscale0 only. No public SSH (OVH has no
 # cloud firewall by default — iptables is the enforcement layer).
-sudo iptables -F INPUT
-sudo iptables -A INPUT -i lo -j ACCEPT
-sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-sudo iptables -A INPUT -i tailscale0 -j ACCEPT
-sudo iptables -A INPUT -p udp --dport 41641 -j ACCEPT   # Tailscale direct conns
-sudo iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
-sudo iptables -P INPUT DROP
+#
+# This closes the public SSH door you are most likely connected through.
+# Your current session survives (ESTABLISHED), but new public SSH is gone
+# — if Tailscale SSH doesn't work, OVH's KVM console is the only way
+# back. So confirm it works first. Set SKIP_INGRESS_CONFIRM=1 to bypass
+# the prompt, or SKIP_INGRESS=1 to leave public SSH open for now.
+SKIP_INGRESS="${SKIP_INGRESS:-0}"
+if [ -t 0 ] && [ "$SKIP_INGRESS" != "1" ] && [ "${SKIP_INGRESS_CONFIRM:-0}" != "1" ]; then
+  echo ""
+  echo "  ⚠  About to close public SSH (ingress becomes Tailscale-only)."
+  echo "     From another terminal, verify this works RIGHT NOW:"
+  echo "         tailscale ssh ubuntu@$TAILNET_HOSTNAME"
+  echo "     Answer 'n' if it fails — you can re-run bootstrap after fixing the ACL."
+  read -r -p "  Tailscale SSH verified working? [y/N] " reply
+  case "$reply" in
+    [yY]*) ;;
+    *) SKIP_INGRESS=1 ;;
+  esac
+fi
+
+if [ "$SKIP_INGRESS" != "1" ]; then
+  sudo iptables -F INPUT
+  sudo iptables -A INPUT -i lo -j ACCEPT
+  sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  sudo iptables -A INPUT -i tailscale0 -j ACCEPT
+  sudo iptables -A INPUT -p udp --dport 41641 -j ACCEPT   # Tailscale direct conns
+  sudo iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+  sudo iptables -P INPUT DROP
+else
+  echo "  → ingress lockdown SKIPPED — public SSH is still open."
+  echo "    Re-run bootstrap once Tailscale SSH works to close it."
+fi
 sudo netfilter-persistent save
 
 # --- [8/8] Agents + repos ---
