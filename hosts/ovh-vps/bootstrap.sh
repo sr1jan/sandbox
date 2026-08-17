@@ -93,7 +93,7 @@ sudo chown agent:agent /workspace/fun
 
 # --- [4/8] Shared scripts + sudoers ---
 echo "[4/8] Installing scripts + sudoers..."
-for s in run lock-env unlock-env sync-secrets with_creds tx gh; do
+for s in run lock-env unlock-env sync-secrets with_creds tx hx gh; do
   sudo install -m 755 "$SANDBOX_DIR/shared/scripts/$s" "/usr/local/bin/$s"
 done
 sudo install -m 440 -o root -g root "$SANDBOX_DIR/shared/sudoers.d/agent" /etc/sudoers.d/agent
@@ -185,6 +185,27 @@ for agent_name in "${AGENTS[@]}"; do
   SANDBOX_DIR="$SANDBOX_DIR" AGENT_HOME="/home/agent" AGENT_USER="agent" \
     bash "$SANDBOX_DIR/agents/$agent_name/install.sh"
 done
+
+# --- Herdr: alternative, agent-aware multiplexer (tmux stays default) ---
+# Client/server over a Unix socket — no listening port, so it doesn't
+# widen the ingress surface. Its `pi` integration is a Pi extension that
+# reports lifecycle state (working/idle/blocked) to herdr's sidebar, and
+# it lands beside our cred-guard.ts / redactor.ts without conflicting.
+echo "[herdr] Installing multiplexer..."
+if ! command -v herdr &>/dev/null; then
+  HERDR_TMP="$(mktemp -t herdr-install-XXXXXX.sh)"
+  if curl -fsSL https://herdr.dev/install.sh -o "$HERDR_TMP"; then
+    sudo HERDR_INSTALL_DIR=/usr/local/bin sh "$HERDR_TMP" \
+      || echo "  warning: herdr install failed (tmux/tx is unaffected)"
+  else
+    echo "  warning: could not download herdr installer (tmux/tx is unaffected)"
+  fi
+  rm -f "$HERDR_TMP"
+fi
+if command -v herdr &>/dev/null; then
+  sudo -u agent herdr integration install pi \
+    || echo "  warning: herdr pi integration not installed"
+fi
 
 echo "[8/8] Cloning personal repos..."
 for repo in $FUN_REPO_URLS; do

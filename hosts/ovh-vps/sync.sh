@@ -14,12 +14,17 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" 'cd /opt/sandbox && sudo git pull --ff-
 echo "[sync] Re-installing scripts, patterns, dotfiles, agents..."
 tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
   set -e
-  for s in run lock-env unlock-env sync-secrets with_creds tx gh; do
+  for s in run lock-env unlock-env sync-secrets with_creds tx hx gh; do
     sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
   done
   sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
   SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
     bash /opt/sandbox/agents/pi/install.sh
+  # Refresh the herdr↔pi state integration if herdr is installed (its
+  # extension lives alongside ours in ~agent/.pi/agent/extensions/).
+  if command -v herdr >/dev/null 2>&1; then
+    sudo -u agent herdr integration install pi >/dev/null 2>&1 || true
+  fi
   sudo -u agent mkdir -p /home/agent/.config/tmuxinator
   for cfg in /opt/sandbox/hosts/ovh-vps/tmuxinator/*.yml; do
     sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
