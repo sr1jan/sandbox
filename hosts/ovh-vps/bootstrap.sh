@@ -115,9 +115,13 @@ for f in .tmux.conf .tmux.conf.local; do
   sudo install -m 644 -o agent -g agent "$SANDBOX_DIR/shared/dotfiles/tmux/$f" "/home/agent/$f"
 done
 sudo -u agent mkdir -p /home/agent/.config/tmuxinator /home/agent/.config/nvim
-for cfg in "$SANDBOX_DIR/shared/tmuxinator/"*.yml; do
+# Host-specific layouts only — shared/tmuxinator/ holds the deepreel
+# `dev` (rooted at /workspace/core) and `fun` layouts, neither of which
+# applies here. Remove them if an earlier bootstrap installed them.
+for cfg in "$SANDBOX_DIR/hosts/ovh-vps/tmuxinator/"*.yml; do
   sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
 done
+sudo rm -f /home/agent/.config/tmuxinator/fun.yml
 sudo -u agent cp -rT "$SANDBOX_DIR/shared/dotfiles/nvim" /home/agent/.config/nvim
 sudo chown -R agent:agent /home/agent/.config/nvim
 sudo install -d -o agent -g agent -m 700 /home/agent/.ssh

@@ -1,0 +1,40 @@
+---
+# Personal sandbox layout for the OVH VPS host.
+#
+# Named `dev` so plain `tx` (which defaults to the `dev` project) works.
+# The old core/fun split doesn't exist here — everything is personal, so
+# there's one layout rooted at /workspace/fun.
+#
+# tmux runs as the agent user (tx enforces that), so Pi's cred-guard and
+# redactor extensions load from /home/agent/.pi/agent/extensions/.
+#
+# Start with:  tx
+
+name: dev
+root: /workspace/fun
+
+startup_window: sandbox
+
+windows:
+  # Root shell — credential management (sudo sync-secrets, etc.)
+  - admin:
+      panes:
+        - sudo -i
+
+  # Pi on the sandbox infra repo. Only this window auto-starts an agent;
+  # the others open plain shells so you don't fire off several sessions
+  # (and their token spend) at once.
+  - sandbox:
+      root: /workspace/fun/sandbox
+      panes:
+        - pi
+
+  - fintrack:
+      root: /workspace/fun/fintrack
+      panes:
+        -
+
+  - wingman:
+      root: /workspace/fun/wingman
+      panes:
+        -

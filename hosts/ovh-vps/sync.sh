@@ -21,9 +21,10 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
   SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
     bash /opt/sandbox/agents/pi/install.sh
   sudo -u agent mkdir -p /home/agent/.config/tmuxinator
-  for cfg in /opt/sandbox/shared/tmuxinator/*.yml; do
+  for cfg in /opt/sandbox/hosts/ovh-vps/tmuxinator/*.yml; do
     sudo install -m 644 -o agent -g agent "$cfg" "/home/agent/.config/tmuxinator/$(basename "$cfg")"
   done
+  sudo rm -f /home/agent/.config/tmuxinator/fun.yml
   for f in .tmux.conf .tmux.conf.local; do
     sudo install -m 644 -o agent -g agent "/opt/sandbox/shared/dotfiles/tmux/$f" "/home/agent/$f"
   done
