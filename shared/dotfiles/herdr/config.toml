@@ -1,0 +1,52 @@
+# herdr keybindings mapped onto the tmux/Oh My Tmux muscle memory used
+# by `tx`, so `hx` and `tx` feel interchangeable.
+#
+# Validate after editing:  herdr config check
+# Reload in a running server:  herdr server reload-config  (or prefix+shift+r)
+#
+# Commented-out lines are herdr defaults that ALREADY match tmux and are
+# listed here only so you can see the overlap:
+#   prefix+c  new tab        prefix+n / prefix+p  next / prev tab
+#   prefix+1..9  switch tab  prefix+x  close pane
+#   prefix+z  zoom           prefix+?  help
+
+[keys]
+# Oh My Tmux binds both C-b and C-a; only C-a is used in practice.
+prefix = "ctrl+a"
+
+# Splits, matching OMT: `-` puts a pane below, `_` (shift+-) puts one right.
+#
+# CAVEAT: herdr names these actions split_horizontal / split_vertical, and
+# the docs never state which produces which direction (its CLI uses the
+# unambiguous down/right instead). The mapping below assumes the divider
+# convention — "horizontal" = horizontal divider = pane below — which is
+# consistent with herdr defaulting split_horizontal to the minus key.
+# If your first split comes out sideways, swap these two values.
+split_horizontal = "prefix+minus"        # expected: pane below  (tmux `-`)
+split_vertical   = "prefix+shift+minus"  # expected: pane right  (tmux `_`)
+
+# Pane movement without the prefix, matching OMT's `bind -n C-h/j/k/l`.
+# Note: some terminals send ctrl+h as backspace. If backspace misbehaves,
+# switch these to "prefix+h" etc.
+focus_pane_left  = "ctrl+h"
+focus_pane_down  = "ctrl+j"
+focus_pane_up    = "ctrl+k"
+focus_pane_right = "ctrl+l"
+
+detach     = "prefix+d"           # herdr default is prefix+q (tmux: pane numbers)
+rename_tab = "prefix+comma"       # tmux rename-window
+close_tab  = "prefix+ampersand"   # tmux kill-window
+
+# tmux's prefix+s is choose-session; herdr's nearest equivalent is the
+# workspace picker. Settings moves out of the way to shift+s.
+workspace_picker = "prefix+s"
+settings         = "prefix+shift+s"
+
+# Left at herdr defaults — no tmux equivalent, or none available:
+#   prefix+b        toggle sidebar (herdr-specific: agent state panel)
+#   prefix+r        resize mode (modal; herdr has no directional resize
+#                   actions, so OMT's repeatable prefix+H/J/K/L can't map)
+#   prefix+tab      cycles panes. In tmux this is last-window, but herdr
+#                   exposes no last_tab action, so it cannot be matched.
+#   prefix+e        edit scrollback (OMT uses it to edit .tmux.conf.local,
+#                   which is irrelevant here)
