@@ -72,6 +72,16 @@ cred-guard and redactor — so Pi reports state via lifecycle hooks rather
 than screen-scraping. Useful when several agent sessions run at once and
 you want to see which one is blocked on input.
 
+Its keybindings are remapped to match the tmux setup — prefix `C-a`,
+`-` / `_` for splits, bare `C-h/j/k/l` for pane movement, `prefix d` to
+detach — via `shared/dotfiles/herdr/config.toml`. Validate edits with
+`herdr config check` (it catches both bad key syntax and unknown action
+names) and reload a running server with `prefix shift+r`. Three tmux
+habits have no herdr equivalent and stay at defaults: repeatable
+directional resize (herdr uses a modal `prefix r`), `prefix Tab` for
+last-window (herdr has no last_tab action; it cycles panes), and
+`prefix b`, which is herdr's agent sidebar.
+
 Security notes: herdr is client/server over a **Unix socket**, so it adds
 no listening port and doesn't widen the Tailscale-only ingress. Its
 remote mode (`herdr --remote ssh://…`) tunnels over SSH, which works

@@ -128,6 +128,8 @@ sudo install -d -o agent -g agent -m 700 /home/agent/.ssh
 sudo install -m 600 -o agent -g agent "$SANDBOX_DIR/shared/dotfiles/ssh/config" /home/agent/.ssh/config
 sudo install -m 644 -o agent -g agent "$SANDBOX_DIR/shared/dotfiles/git/gitconfig"          /home/agent/.gitconfig
 sudo install -m 644 -o agent -g agent "$SANDBOX_DIR/shared/dotfiles/git/gitconfig.personal" /home/agent/.gitconfig.personal
+sudo -u agent mkdir -p /home/agent/.config/herdr
+sudo install -m 644 -o agent -g agent "$SANDBOX_DIR/shared/dotfiles/herdr/config.toml" /home/agent/.config/herdr/config.toml
 
 # --- [7/8] Firewall: egress allowlist + Tailscale-only ingress ---
 echo "[7/8] Applying iptables rules..."

@@ -40,6 +40,8 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
   sudo install -m 600 -o agent -g agent /opt/sandbox/shared/dotfiles/ssh/config /home/agent/.ssh/config
   sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig          /home/agent/.gitconfig
   sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/git/gitconfig.personal /home/agent/.gitconfig.personal
+  sudo -u agent mkdir -p /home/agent/.config/herdr
+  sudo install -m 644 -o agent -g agent /opt/sandbox/shared/dotfiles/herdr/config.toml /home/agent/.config/herdr/config.toml
   if sudo test -f /etc/devbox/locked/keys/id_ed25519_personal; then
     sudo install -m 600 -o agent -g agent /etc/devbox/locked/keys/id_ed25519_personal     /home/agent/.ssh/id_ed25519_personal
     sudo install -m 644 -o agent -g agent /etc/devbox/locked/keys/id_ed25519_personal.pub /home/agent/.ssh/id_ed25519_personal.pub
