@@ -190,24 +190,8 @@ done
 
 # --- Herdr: alternative, agent-aware multiplexer (tmux stays default) ---
 # Client/server over a Unix socket — no listening port, so it doesn't
-# widen the ingress surface. Its `pi` integration is a Pi extension that
-# reports lifecycle state (working/idle/blocked) to herdr's sidebar, and
-# it lands beside our cred-guard.ts / redactor.ts without conflicting.
-echo "[herdr] Installing multiplexer..."
-if ! command -v herdr &>/dev/null; then
-  HERDR_TMP="$(mktemp -t herdr-install-XXXXXX.sh)"
-  if curl -fsSL https://herdr.dev/install.sh -o "$HERDR_TMP"; then
-    sudo HERDR_INSTALL_DIR=/usr/local/bin sh "$HERDR_TMP" \
-      || echo "  warning: herdr install failed (tmux/tx is unaffected)"
-  else
-    echo "  warning: could not download herdr installer (tmux/tx is unaffected)"
-  fi
-  rm -f "$HERDR_TMP"
-fi
-if command -v herdr &>/dev/null; then
-  sudo -u agent herdr integration install pi \
-    || echo "  warning: herdr pi integration not installed"
-fi
+# widen the ingress surface. Shared with sync.sh so both paths agree.
+AGENT_USER=agent bash "$SANDBOX_DIR/shared/scripts/install-herdr"
 
 echo "[8/8] Cloning personal repos..."
 for repo in $FUN_REPO_URLS; do
