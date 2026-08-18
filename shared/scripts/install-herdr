@@ -1,0 +1,36 @@
+#!/bin/bash
+# install-herdr — idempotent install of the herdr multiplexer + its Pi
+# state integration. Invoked by hosts/*/bootstrap.sh and sync.sh so both
+# paths stay in step (they drifted once; hence this file).
+#
+# Installs the binary system-wide to /usr/local/bin so every user's PATH
+# finds it — `hx` re-execs through `sudo -u agent -i`, a login shell with
+# a reset PATH, so a per-user ~/.local/bin install is not enough.
+#
+# Never fatal: herdr is the optional alternative to tmux, so a failure
+# here must not fail a bootstrap or a sync.
+
+set -uo pipefail
+
+: "${AGENT_USER:=agent}"
+
+if ! command -v herdr >/dev/null 2>&1; then
+  echo "[herdr] Installing binary to /usr/local/bin..."
+  tmp="$(mktemp -t herdr-install-XXXXXX.sh)"
+  if curl -fsSL https://herdr.dev/install.sh -o "$tmp"; then
+    sudo HERDR_INSTALL_DIR=/usr/local/bin sh "$tmp" \
+      || echo "[herdr] warning: install failed (tmux/tx unaffected)"
+  else
+    echo "[herdr] warning: could not download installer (tmux/tx unaffected)"
+  fi
+  rm -f "$tmp"
+else
+  echo "[herdr] already installed: $(command -v herdr)"
+fi
+
+# Pi integration: a state-reporting extension landing in
+# ~agent/.pi/agent/extensions/ beside cred-guard.ts and redactor.ts.
+if command -v herdr >/dev/null 2>&1; then
+  sudo -u "$AGENT_USER" herdr integration install pi \
+    || echo "[herdr] warning: pi integration not installed"
+fi
