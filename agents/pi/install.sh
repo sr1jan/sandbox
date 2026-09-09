@@ -45,8 +45,10 @@ PI_BIN="/opt/pi/node_modules/.bin/pi"
 
 # Install `pi` wrapper on PATH. Wraps via `sudo run` so provider API keys
 # are sourced from /etc/devbox/locked/secrets at invocation time — never
-# persisted in the agent's env or .bashrc. Pi's built-in providers pick
-# them up from the process env:
+# persisted in the agent's env or .bashrc. shared/sudoers.d/agent env_keep
+# must preserve HERDR_* across that sudo so herdr-agent-state can report
+# the pane (Agents sidebar). Pi's built-in providers pick keys up from
+# the process env:
 #   DEEPSEEK_API_KEY   (deepseek — PAYG default)
 #   ZAI_API_KEY        (zai — GLM Coding Plan endpoint)
 #   KIMI_API_KEY       (kimi-coding — Kimi membership endpoint)
