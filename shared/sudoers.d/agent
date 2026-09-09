@@ -9,4 +9,11 @@ agent ALL=(root) NOPASSWD: /bin/bash
 # `-i` wipes those env vars and `tx fun` from that pane can't detect
 # it's already in tmux → nests instead of switch-client. TMUX is the
 # socket path string; not security-sensitive in this single-user box.
-Defaults env_keep += "TMUX TMUX_PANE"
+#
+# Preserve Herdr pane identity across `sudo run` (the /usr/local/bin/pi
+# wrapper). Herdr injects these into every managed pane; pi's
+# herdr-agent-state extension only reports to the Agents sidebar when
+# they reach the real pi process. They are session/socket IDs, not
+# secrets. Without this, sudo env_reset drops them and the pane stays
+# agent_status=unknown. Same threat posture as TMUX above.
+Defaults env_keep += "TMUX TMUX_PANE HERDR_ENV HERDR_PANE_ID HERDR_SESSION HERDR_SOCKET_PATH HERDR_TAB_ID HERDR_WORKSPACE_ID"
