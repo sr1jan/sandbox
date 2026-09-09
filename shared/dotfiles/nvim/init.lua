@@ -6,6 +6,24 @@ vim.g.mapleader = ','
 vim.g.maplocalleader = ','
 vim.g.lasttab = 1
 
+-- Ubuntu 24.04 ships /usr/bin/nvim 0.9.5. This config needs 0.10+.
+if vim.fn.has('nvim-0.10') == 0 then
+  local ver = vim.version()
+  vim.api.nvim_echo({
+    {
+      string.format(
+        'Neovim %d.%d is too old (need 0.10+). Launched %s. Use ~/.local/bin/nvim (0.11.1), then run: hash -r',
+        ver.major,
+        ver.minor,
+        vim.v.progpath
+      ),
+      'ErrorMsg',
+    },
+  }, true, {})
+  pcall(vim.cmd.colorscheme, 'habamax')
+  return
+end
+
 -- Load core settings
 require('options')
 require('keymaps')
@@ -48,4 +66,4 @@ require('lazy').setup('plugins', {
 
 -- We will ensure it's loaded via lazy.
 vim.cmd.colorscheme('unokai')
-vim.g.background = 'light'
+vim.o.background = 'light'

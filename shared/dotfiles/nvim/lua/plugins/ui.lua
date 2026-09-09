@@ -54,7 +54,6 @@ return {
     'karb94/neoscroll.nvim',
     config = function()
       require('neoscroll').setup({
-        -- All these keys will be mapped to their corresponding default scrolling animation
         mappings = {
           '<C-u>',
           '<C-d>',
@@ -66,17 +65,11 @@ return {
           'zz',
           'zb',
         },
-        hide_cursor = true, -- Hide cursor while scrolling
-        stop_eof = true, -- Stop scrolling when reaching the end or beginning of the file
-        respect_scrolloff = false, -- Stop scrolling when the cursor reaches the scrolloff margin
-        cursor_scrolls_alone = true, -- The cursor will keep on the same line when scrolling
-        easing_function = 'quadratic', -- "circular", "quadratic", "cubic", "linear"
-        pre_hook = nil,
-        post_hook = nil,
-        performance_options = {
-          frame_rendering_latency = 8,
-          full_win_line_collection = false,
-        },
+        hide_cursor = true,
+        stop_eof = true,
+        respect_scrolloff = false,
+        cursor_scrolls_alone = true,
+        easing = 'quadratic',
       })
     end,
   },
