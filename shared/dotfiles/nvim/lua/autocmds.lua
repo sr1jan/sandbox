@@ -64,8 +64,8 @@ autocmd('FileType', {
   pattern = 'javascript',
   group = group,
   callback = function()
-    vim.wo.fen = true       -- ✅ Corrected to use vim.wo for a window-local option
-    vim.bo.nocindent = true -- This one is correct, as 'cindent' is a buffer-local option
+    vim.wo.fen = true
+    vim.bo.cindent = false
     vim.keymap.set('i', '<c-t>', '$log();<esc>hi', { buffer = true })
     vim.keymap.set('i', '<c-a>', 'alert();<esc>hi', { buffer = true })
     vim.keymap.set('i', '$r', 'return', { buffer = true })
