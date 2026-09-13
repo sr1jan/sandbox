@@ -1,6 +1,6 @@
 # Sandbox — Cred-Isolated Coding Agent Environments
 
-Run coding agents (Claude Code, Pi) on a private VM where they can write
+Run coding agents (Claude Code, Pi, omp) on a private VM where they can write
 code and call `gh` / `aws` / `psql` — but **can't** read `.env` files,
 see credentials in `env`, or reach the internet outside an allowlist.
 
@@ -153,7 +153,8 @@ sandbox/
 │
 ├── agents/
 │   ├── claude-code/    # PreToolUse + PostToolUse shell hooks + install.sh
-│   └── pi/             # TS extensions for Pi
+│   ├── pi/             # TS extensions for Pi
+│   └── omp/            # TS extensions + skill for Oh My Pi (omp)
 │
 ├── hosts/
 │   ├── ovh-vps/        # bootstrap.sh, sync.sh, connect.sh, ship-keys.sh,
@@ -172,7 +173,7 @@ sandbox/
 
 ## Supported
 
-- **Agents**: Claude Code (primary, YOLO mode safe by construction), Pi
+- **Agents**: Claude Code (primary, YOLO mode safe by construction), Pi, omp
 - **Hosts**: `ovh-vps` (personal sandbox, Mumbai), `aws-ec2` (deepreel sandbox — decommissioning Aug 2026), `gcp-vm`, `docker-mac`
 
 ## Mobile access

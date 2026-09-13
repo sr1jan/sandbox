@@ -2,7 +2,7 @@
 # sync.sh — reconcile a running OVH sandbox with the repo. Idempotent.
 #   - git pull /opt/sandbox
 #   - reinstall shared scripts, sudoers, patterns, dotfiles, tmuxinator
-#   - reinstall Pi extensions/skills/patterns (agents/pi/install.sh)
+#   - reinstall Pi + omp extensions/skills/patterns
 #   - install any shipped keys onto agent (ssh + gpg + gh token)
 #   - clone any FUN_REPO_URLS missing from /workspace/fun/
 set -euo pipefail
@@ -20,6 +20,10 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
   sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
   SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
     bash /opt/sandbox/agents/pi/install.sh
+  if [ -x /opt/sandbox/agents/omp/install.sh ]; then
+    SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
+      bash /opt/sandbox/agents/omp/install.sh
+  fi
   AGENT_USER=agent bash /opt/sandbox/shared/scripts/install-herdr
   sudo -u agent mkdir -p /home/agent/.config/tmuxinator
   for cfg in /opt/sandbox/hosts/ovh-vps/tmuxinator/*.yml; do

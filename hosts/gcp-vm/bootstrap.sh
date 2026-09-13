@@ -6,6 +6,7 @@
 #   ./hosts/gcp-vm/bootstrap.sh                 # defaults to --agent pi
 #   ./hosts/gcp-vm/bootstrap.sh --agent pi
 #   ./hosts/gcp-vm/bootstrap.sh --agent claude-code
+#   ./hosts/gcp-vm/bootstrap.sh --agent omp
 
 set -euo pipefail
 
@@ -14,7 +15,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --agent) AGENT="$2"; shift 2;;
     --help|-h)
-      echo "Usage: $0 [--agent pi|claude-code]"
+      echo "Usage: $0 [--agent pi|claude-code|omp]"
       exit 0;;
     *) echo "Unknown flag: $1"; exit 1;;
   esac
