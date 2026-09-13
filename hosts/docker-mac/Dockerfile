@@ -64,6 +64,12 @@ COPY agents/pi/extensions/ /home/agent/.pi/agent/extensions/
 COPY agents/pi/skills/ /home/agent/.pi/agent/skills/
 COPY shared/patterns/ /home/agent/.pi/agent/patterns/
 
+# Omp sandbox harness (cred-guard / redactor / tmux-tools + skill)
+RUN mkdir -p /home/agent/.omp/agent/extensions /home/agent/.omp/agent/skills /home/agent/.omp/agent/patterns
+COPY agents/omp/extensions/ /home/agent/.omp/agent/extensions/
+COPY agents/omp/skills/ /home/agent/.omp/agent/skills/
+COPY shared/patterns/ /home/agent/.omp/agent/patterns/
+
 # Nvim data dirs (config is mounted ro, plugins need writable dirs)
 RUN mkdir -p /home/agent/.local/share/nvim /home/agent/.local/state/nvim /home/agent/.cache/nvim
 

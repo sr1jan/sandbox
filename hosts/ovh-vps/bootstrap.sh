@@ -9,12 +9,12 @@
 # Idempotent: safe to re-run. Applies the five isolation layers:
 #   1. /etc/devbox/locked root:700/600   (OS perms)
 #   2. sudoers: agent may only `sudo run` (shared/sudoers.d/agent)
-#   3. cred-guard patterns (Pi extension / Claude Code hook)
-#   4. redactor patterns  (Pi extension / Claude Code hook)
+#   3. cred-guard patterns (Pi/omp extension / Claude Code hook)
+#   4. redactor patterns  (Pi/omp extension / Claude Code hook)
 #   5. iptables egress allowlist + Tailscale-only ingress
 #
 # Flags:
-#   --agent pi|claude-code   (repeatable; default: pi)
+#   --agent pi|claude-code|omp   (repeatable; default: pi)
 
 set -euo pipefail
 
@@ -22,7 +22,7 @@ AGENTS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --agent) AGENTS+=("$2"); shift 2;;
-    --help|-h) echo "Usage: TS_AUTHKEY=... $0 [--agent pi|claude-code]..."; exit 0;;
+    --help|-h) echo "Usage: TS_AUTHKEY=... $0 [--agent pi|claude-code|omp]..."; exit 0;;
     *) echo "Unknown flag: $1" >&2; exit 1;;
   esac
 done
