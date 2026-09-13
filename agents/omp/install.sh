@@ -45,14 +45,28 @@ if ! sudo -u "$AGENT_USER" bash -lc 'command -v omp >/dev/null'; then
   sudo -u "$AGENT_USER" bash -lc "curl -fsSL '$OMP_INSTALL_URL' | sh"
 fi
 
-OMP_BIN="$(sudo -u "$AGENT_USER" bash -lc 'command -v omp' || true)"
-if [ -z "$OMP_BIN" ] && [ -x "$AGENT_HOME/.local/bin/omp" ]; then
-  OMP_BIN="$AGENT_HOME/.local/bin/omp"
+# Official installer drops the binary on the agent's PATH (usually
+# ~/.local/bin/omp). Move it to /opt/omp/omp so it cannot shadow the
+# /usr/local/bin/omp sudo-run wrapper (agent PATH puts ~/.local/bin first).
+sudo mkdir -p /opt/omp
+OMP_SRC=""
+if [ -x "$AGENT_HOME/.local/bin/omp" ] && [ ! -L "$AGENT_HOME/.local/bin/omp" ]; then
+  OMP_SRC="$AGENT_HOME/.local/bin/omp"
+elif OMP_SRC="$(sudo -u "$AGENT_USER" bash -lc 'command -v omp' 2>/dev/null)" && [ -n "$OMP_SRC" ] && [ -x "$OMP_SRC" ]; then
+  :
+else
+  OMP_SRC=""
 fi
-[ -n "$OMP_BIN" ] && [ -x "$OMP_BIN" ] || {
+[ -n "$OMP_SRC" ] || {
   echo "[omp-install] ERROR: omp binary not found after install" >&2
   exit 1
 }
+if [ "$OMP_SRC" != "/opt/omp/omp" ]; then
+  sudo mv "$OMP_SRC" /opt/omp/omp
+fi
+sudo chmod 755 /opt/omp/omp
+# Drop any leftover agent-local shadow so `omp` resolves to the wrapper.
+sudo rm -f "$AGENT_HOME/.local/bin/omp"
 
 # Install `omp` wrapper on PATH. Wraps via `sudo run` so provider API keys
 # are sourced from /etc/devbox/locked/secrets at invocation time — never
@@ -63,9 +77,9 @@ fi
 # Built-in cursor provider: CURSOR_ACCESS_TOKEN (session JWT).
 # Dashboard User API Key (crsr_…) needs exchange into ACCESS_TOKEN first;
 # CURSOR_API_KEY alone is not enough for omp's built-in cursor client.
-sudo tee /usr/local/bin/omp >/dev/null <<EOF
+sudo tee /usr/local/bin/omp >/dev/null <<'EOF'
 #!/bin/bash
-exec sudo /usr/local/bin/run $OMP_BIN "\$@"
+exec sudo /usr/local/bin/run /opt/omp/omp "$@"
 EOF
 sudo chmod 755 /usr/local/bin/omp
 
