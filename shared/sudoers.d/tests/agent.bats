@@ -1,9 +1,14 @@
 #!/usr/bin/env bats
 
-# Pins shared/sudoers.d/agent env_keep so sudo run (the /usr/local/bin/pi
-# wrapper) still forwards Herdr pane identity to the real pi process.
+# Pins shared/sudoers.d/agent: run-only escalation + env_keep so sudo run
+# (the /usr/local/bin/pi wrapper) still forwards Herdr pane identity.
 
 SUDOERS="$BATS_TEST_DIRNAME/../agent"
+
+@test "agent may sudo run only — no NOPASSWD shells" {
+  grep -E '^agent ALL=\(root\) NOPASSWD: /usr/local/bin/run \*$' "$SUDOERS"
+  ! grep -E 'NOPASSWD:.*(/bin/bash|/bin/sh|/usr/bin/bash)' "$SUDOERS"
+}
 
 @test "env_keep preserves tmux identity" {
   grep -E '^Defaults env_keep \+= ".*\bTMUX\b' "$SUDOERS"

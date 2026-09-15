@@ -2,6 +2,9 @@
 # Personal projects (separate from deepreel work in /workspace/core/).
 # Repos here are cloned by bootstrap from the fun_repo_urls tfvar.
 #
+# No admin/root window here — same agent-owned tmux socket as `dev`.
+# Root work: plain SSH as ubuntu, then `sudo -i`.
+#
 # Start with:  tx fun
 
 name: fun
@@ -10,11 +13,6 @@ root: /workspace/fun
 startup_window: sandbox
 
 windows:
-  # Root shell — credential mgmt (sudo sync-secrets, etc.)
-  - admin:
-      panes:
-        - sudo -i
-
   # Claude Code on the sandbox infra repo
   - sandbox:
       root: /workspace/fun/sandbox

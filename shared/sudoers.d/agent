@@ -1,14 +1,17 @@
-# Agent user can run the credential wrapper and get an admin shell.
-# Pi's cred-guard extension blocks the agent from running sudo bash via bash tool.
-# sudo bash is only used manually from the admin tmux window.
+# Agent user may only escalate via the credential wrapper.
+# `/usr/local/bin/run` loads locked secrets as root, then gosu-drops back
+# to agent before exec — so the child never stays euid 0.
+#
+# Do NOT grant NOPASSWD for /bin/bash (or other shells). That would give
+# the agent a durable root shell and defeat OS-level isolation. Soft
+# agent hooks (cred-guard) are UX only and do not enforce this.
+#
+# Root/admin work: plain SSH as ubuntu, then `sudo -i` — never a root
+# shell inside the agent-owned tmux socket (see hosts/*/tmuxinator).
 agent ALL=(root) NOPASSWD: /usr/local/bin/run *
-agent ALL=(root) NOPASSWD: /bin/bash
 
-# Preserve TMUX/TMUX_PANE across `sudo -i`. The dev session's admin
-# window opens a `sudo -i` root shell inside agent's tmux; without this,
-# `-i` wipes those env vars and `tx fun` from that pane can't detect
-# it's already in tmux → nests instead of switch-client. TMUX is the
-# socket path string; not security-sensitive in this single-user box.
+# Preserve TMUX/TMUX_PANE across sudo when needed. TMUX is the socket
+# path string; not security-sensitive on this single-user box.
 #
 # Preserve Herdr pane identity across `sudo run` (the /usr/local/bin/pi
 # wrapper). Herdr injects these into every managed pane; pi's
