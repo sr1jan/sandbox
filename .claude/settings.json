@@ -26,5 +26,12 @@
       "Bash(terraform workspace select:*)",
       "Bash(terraform output:*)"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/statusline.sh\"",
+    "padding": 0,
+    "refreshInterval": 5,
+    "hideVimModeIndicator": true
   }
 }
