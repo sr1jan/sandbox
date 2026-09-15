@@ -1,0 +1,17 @@
+#!/bin/bash
+# omp-with-cursor — refresh the Cursor JWT, then exec omp.
+# Installed as the body of /usr/local/bin/omp (via sudo run).
+set -euo pipefail
+set +x
+
+REFRESH="${REFRESH_CURSOR_TOKEN:-/usr/local/bin/refresh-cursor-token}"
+OMP_BIN="${OMP_BIN:-/opt/omp/omp}"
+
+if [ -x "$REFRESH" ]; then
+  token="$("$REFRESH" --print-token || true)"
+  if [ -n "${token:-}" ]; then
+    export CURSOR_ACCESS_TOKEN="$token"
+  fi
+fi
+
+exec "$OMP_BIN" "$@"

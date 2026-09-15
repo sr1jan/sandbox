@@ -77,11 +77,16 @@ sudo rm -f "$AGENT_HOME/.local/bin/omp"
 # Built-in cursor provider: CURSOR_ACCESS_TOKEN (session JWT).
 # Dashboard User API Key (crsr_…) needs exchange into ACCESS_TOKEN first;
 # CURSOR_API_KEY alone is not enough for omp's built-in cursor client.
+# refresh-cursor-token re-mints the 1h JWT from CURSOR_API_KEY on each
+# omp start; cursor-token-refresh.ts re-exchanges during a long session.
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/refresh-cursor-token" /usr/local/bin/refresh-cursor-token
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/omp-with-cursor" /usr/local/bin/omp-with-cursor
 sudo tee /usr/local/bin/omp >/dev/null <<'EOF'
 #!/bin/bash
-exec sudo /usr/local/bin/run /opt/omp/omp "$@"
+exec sudo /usr/local/bin/run /usr/local/bin/omp-with-cursor "$@"
 EOF
 sudo chmod 755 /usr/local/bin/omp
+sudo rm -f /etc/cron.d/refresh-cursor-token
 
 # PATH addition for /home/agent/.local/bin (user-installed bins).
 if ! sudo -u "$AGENT_USER" grep -q "/home/agent/.local/bin" "$AGENT_HOME/.bashrc" 2>/dev/null; then
@@ -92,4 +97,5 @@ fi
 echo "[omp-install] Done."
 echo "[omp-install] Provider keys live in /etc/devbox/locked/secrets (sudo sync-secrets)."
 echo "[omp-install] Sandbox extensions: cred-guard, redactor, tmux-tools."
-echo "[omp-install] For Cursor models: set CURSOR_ACCESS_TOKEN (or exchange CURSOR_API_KEY)."
+echo "[omp-install] For Cursor models: put CURSOR_API_KEY in locked secrets;"
+echo "[omp-install] refresh-cursor-token mints CURSOR_ACCESS_TOKEN (1h JWT) on omp start and mid-session."

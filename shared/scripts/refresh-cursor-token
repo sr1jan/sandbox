@@ -1,0 +1,247 @@
+#!/bin/bash
+# refresh-cursor-token — re-exchange CURSOR_API_KEY into a 1h JWT
+# (CURSOR_ACCESS_TOKEN) for omp's built-in cursor provider.
+#
+# Dashboard User API Keys (crsr_…) are not session tokens. Cursor's
+# Connect/cursor-agent API wants a JWT from:
+#   POST https://api2.cursor.sh/auth/exchange_user_api_key
+# that expires in ~1 hour. This script re-mints that JWT.
+#
+# CURSOR_API_KEY lookup (first wins):
+#   1. Environment (sudo run / locked secrets)
+#   2. /etc/devbox/locked/secrets when running as root
+#   3. $OMP_ENV_FILE (default: /home/agent/.omp/.env)
+#
+# Writes CURSOR_ACCESS_TOKEN to ~/.omp/.env only — do not persist the
+# short-lived JWT in locked secrets (it goes stale and then shadows the
+# fresh file via `sudo run`).
+#
+# Usage:
+#   sudo run refresh-cursor-token
+#   sudo refresh-cursor-token          # root (locked secrets)
+#   refresh-cursor-token --force
+#   refresh-cursor-token --print-token # stdout = JWT (trusted wrapper only)
+#   refresh-cursor-token --self-test
+
+set -euo pipefail
+set +x
+
+EXCHANGE_URL="${CURSOR_EXCHANGE_URL:-https://api2.cursor.sh/auth/exchange_user_api_key}"
+AGENT_USER="${AGENT_USER:-agent}"
+AGENT_HOME="${AGENT_HOME:-/home/${AGENT_USER}}"
+OMP_ENV_FILE="${OMP_ENV_FILE:-${AGENT_HOME}/.omp/.env}"
+SKEW_SECS="${CURSOR_TOKEN_REFRESH_SKEW_SECS:-300}"
+LOCKED_SECRETS="${LOCKED_SECRETS:-/etc/devbox/locked/secrets}"
+
+FORCE=0
+PRINT_TOKEN=0
+SELF_TEST=0
+for arg in "$@"; do
+  case "$arg" in
+    --force) FORCE=1 ;;
+    --print-token) PRINT_TOKEN=1 ;;
+    --self-test) SELF_TEST=1 ;;
+    --help|-h)
+      sed -n '2,25p' "$0"
+      exit 0
+      ;;
+  esac
+done
+
+if [ "$(id -u)" -eq 0 ] && [ -f "$LOCKED_SECRETS" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$LOCKED_SECRETS"
+  set +a
+fi
+
+export OMP_ENV_FILE EXCHANGE_URL SKEW_SECS AGENT_USER
+
+PY_ARGS=()
+[ "$FORCE" -eq 1 ] && PY_ARGS+=(--force)
+[ "$SELF_TEST" -eq 1 ] && PY_ARGS+=(--self-test)
+
+TOKEN="$(python3 - "${PY_ARGS[@]}" <<'PY'
+import base64, json, os, re, sys, tempfile, time, urllib.error, urllib.request
+
+KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+
+
+def b64url_json(segment: str):
+    pad = "=" * (-len(segment) % 4)
+    return json.loads(base64.urlsafe_b64decode(segment + pad))
+
+
+def jwt_exp(token: str):
+    if not token or token.count(".") < 2:
+        return None
+    try:
+        payload = b64url_json(token.split(".")[1])
+    except Exception:
+        return None
+    exp = payload.get("exp")
+    return int(exp) if isinstance(exp, (int, float)) else None
+
+
+def seconds_left(token: str):
+    exp = jwt_exp(token)
+    if exp is None:
+        return None
+    return exp - int(time.time())
+
+
+def read_env_file(path: str) -> dict:
+    out = {}
+    if not path or not os.path.isfile(path):
+        return out
+    with open(path, "r", encoding="utf-8") as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("export "):
+                line = line[7:].lstrip()
+            if "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            key = key.strip()
+            if not KEY_RE.match(key):
+                continue
+            val = val.strip()
+            if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+                val = val[1:-1]
+            out[key] = val
+    return out
+
+
+def upsert_env_file(path: str, key: str, value: str, owner_uid=None, owner_gid=None):
+    if not KEY_RE.match(key):
+        raise SystemExit(f"invalid key: {key}")
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    existing = []
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as fh:
+            for raw in fh:
+                stripped = raw.strip()
+                check = stripped[7:].lstrip() if stripped.startswith("export ") else stripped
+                if check.startswith(f"{key}="):
+                    continue
+                existing.append(raw.rstrip("\n"))
+    escaped = value.replace("'", "'\"'\"'")
+    existing.append(f"{key}='{escaped}'")
+    directory = os.path.dirname(path) or "."
+    fd, tmp = tempfile.mkstemp(prefix=".env.", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(existing).rstrip() + "\n")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+        os.chmod(path, 0o600)
+        if owner_uid is not None and owner_gid is not None:
+            os.chown(path, owner_uid, owner_gid)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def exchange(api_key: str, url: str) -> str:
+    req = urllib.request.Request(
+        url,
+        data=b"{}",
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            body = resp.read()
+    except urllib.error.HTTPError as exc:
+        raise SystemExit(f"exchange_failed http_{exc.code}") from exc
+    except urllib.error.URLError as exc:
+        raise SystemExit(f"exchange_failed {exc.reason}") from exc
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise SystemExit("exchange_failed bad_json") from exc
+    token = data.get("accessToken") or data.get("access_token")
+    if not isinstance(token, str) or not token:
+        raise SystemExit("exchange_failed missing_access_token")
+    return token
+
+
+def self_test():
+    header = base64.urlsafe_b64encode(b'{"alg":"none"}').decode().rstrip("=")
+
+    def tok(exp):
+        payload = base64.urlsafe_b64encode(json.dumps({"exp": exp}).encode()).decode().rstrip("=")
+        return f"{header}.{payload}.x"
+
+    now = int(time.time())
+    assert seconds_left(tok(now + 120)) == 120
+    assert seconds_left("not-a-jwt") is None
+    directory = tempfile.mkdtemp()
+    path = os.path.join(directory, ".env")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("FOO=keep\nCURSOR_ACCESS_TOKEN='old'\n")
+    upsert_env_file(path, "CURSOR_ACCESS_TOKEN", "new-token")
+    parsed = read_env_file(path)
+    assert parsed["FOO"] == "keep"
+    assert parsed["CURSOR_ACCESS_TOKEN"] == "new-token"
+    print("self_test_ok")
+
+
+def main(argv):
+    if "--self-test" in argv:
+        self_test()
+        return
+    force = "--force" in argv
+    env_file = os.environ["OMP_ENV_FILE"]
+    url = os.environ["EXCHANGE_URL"]
+    skew = int(os.environ["SKEW_SECS"])
+    file_vals = read_env_file(env_file)
+    api_key = os.environ.get("CURSOR_API_KEY") or file_vals.get("CURSOR_API_KEY") or ""
+    current = os.environ.get("CURSOR_ACCESS_TOKEN") or file_vals.get("CURSOR_ACCESS_TOKEN") or ""
+    if not force and current:
+        left = seconds_left(current)
+        if left is not None and left > skew:
+            print(f"fresh ttl_s={left}", file=sys.stderr)
+            print(current)
+            return
+    if not api_key:
+        raise SystemExit("missing_cursor_api_key")
+    token = exchange(api_key, url)
+    left = seconds_left(token)
+    owner_uid = owner_gid = None
+    owner = os.environ.get("AGENT_USER")
+    if owner:
+        try:
+            import pwd
+            pw = pwd.getpwnam(owner)
+            owner_uid, owner_gid = pw.pw_uid, pw.pw_gid
+        except KeyError:
+            pass
+    upsert_env_file(env_file, "CURSOR_ACCESS_TOKEN", token, owner_uid, owner_gid)
+    ttl = f"ttl_s={left}" if left is not None else "ttl_s=unknown"
+    print(f"refreshed {ttl}", file=sys.stderr)
+    print(token)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
+PY
+)"
+
+if [ "$SELF_TEST" -eq 1 ]; then
+  printf '%s\n' "$TOKEN"
+  exit 0
+fi
+
+if [ "$PRINT_TOKEN" -eq 1 ]; then
+  printf '%s' "$TOKEN"
+fi
