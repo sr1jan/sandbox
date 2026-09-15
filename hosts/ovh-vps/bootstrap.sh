@@ -96,6 +96,7 @@ echo "[4/8] Installing scripts + sudoers..."
 for s in run lock-env unlock-env sync-secrets with_creds tx hx gh; do
   sudo install -m 755 "$SANDBOX_DIR/shared/scripts/$s" "/usr/local/bin/$s"
 done
+sudo visudo -cf "$SANDBOX_DIR/shared/sudoers.d/agent"
 sudo install -m 440 -o root -g root "$SANDBOX_DIR/shared/sudoers.d/agent" /etc/sudoers.d/agent
 
 # --- [5/8] Locked secrets dir ---

@@ -2,8 +2,10 @@
 # Runs INSIDE the sandbox VM. Single tmux layer.
 # tmux runs as the agent user (so the cred-guard hooks fire on Bash tool
 # calls). New windows you create with Ctrl-b c also inherit the agent
-# user. The "admin" window opens with `sudo -i` to elevate to root for
-# credential management.
+# user.
+#
+# No admin/root window here — agent owns this tmux socket. Root work:
+# plain SSH as ubuntu, then `sudo -i`.
 #
 # Start with:
 #   sudo -u agent -i
@@ -15,11 +17,6 @@ root: /workspace/core
 startup_window: backend
 
 windows:
-  # Root shell — credential management (sudo sync-secrets, sudo vi /etc/devbox/locked/secrets, etc.)
-  - admin:
-      panes:
-        - sudo -i
-
   # Claude Code on the backend repo
   - backend:
       root: /workspace/core/backend
