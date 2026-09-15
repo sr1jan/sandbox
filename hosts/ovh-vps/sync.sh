@@ -2,7 +2,7 @@
 # sync.sh — reconcile a running OVH sandbox with the repo. Idempotent.
 #   - git pull /opt/sandbox
 #   - reinstall shared scripts, sudoers, patterns, dotfiles, tmuxinator
-#   - reinstall Pi + omp extensions/skills/patterns
+#   - reinstall Pi + omp + Claude Code extensions/skills/patterns
 #   - install any shipped keys onto agent (ssh + gpg + gh token)
 #   - clone any FUN_REPO_URLS missing from /workspace/fun/
 set -euo pipefail
@@ -17,12 +17,17 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
   for s in run lock-env unlock-env sync-secrets with_creds tx hx gh; do
     sudo install -m 755 /opt/sandbox/shared/scripts/$s /usr/local/bin/$s
   done
+  sudo visudo -cf /opt/sandbox/shared/sudoers.d/agent
   sudo install -m 440 -o root -g root /opt/sandbox/shared/sudoers.d/agent /etc/sudoers.d/agent
   SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
     bash /opt/sandbox/agents/pi/install.sh
   if [ -x /opt/sandbox/agents/omp/install.sh ]; then
     SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
       bash /opt/sandbox/agents/omp/install.sh
+  fi
+  if [ -x /opt/sandbox/agents/claude-code/install.sh ]; then
+    SANDBOX_DIR=/opt/sandbox AGENT_HOME=/home/agent AGENT_USER=agent \
+      bash /opt/sandbox/agents/claude-code/install.sh
   fi
   AGENT_USER=agent bash /opt/sandbox/shared/scripts/install-herdr
   sudo -u agent mkdir -p /home/agent/.config/tmuxinator
@@ -52,7 +57,7 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
     sudo install -d -o agent -g agent -m 700 /home/agent/.gnupg
     sudo cat /etc/devbox/locked/keys/gpg_personal.asc \
       | sudo -u agent gpg --batch --import 2>&1 \
-      | grep -vE "secret key imported|already in secret keyring" || true
+      | grep -vE "[REDACTED] imported|already in [REDACTED] || true
   fi
   sudo install -d -o agent -g agent -m 700 /home/agent/.config/gh/tokens
   if sudo test -f /etc/devbox/locked/secrets; then

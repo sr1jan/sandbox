@@ -32,9 +32,10 @@ Run as agent (`./connect.sh agent`):
 | Check | Expect |
 |---|---|
 | `cat /etc/devbox/locked/secrets` | Permission denied |
-| `sudo bash` | sudoers denial (only `run` allowed) |
+| `sudo bash` / `sudo -i` as agent | sudoers denial (only `run` allowed) |
+| root shell inside agent tmux | N/A — layout has no admin/root window |
 | inside `pi`: read a `.env` path | cred-guard block |
-| inside `pi`: `echo sk-ant-test1234567890abcdefghij` output | `[REDACTED]` in context |
+| inside `pi`: `echo [REDACTED]` output | `[REDACTED]` in context |
 | `curl --max-time 5 http://example.com:8080` | timeout (egress allowlist) |
 | `nc -zv <public-ip> 22` from a non-tailnet machine | no route/filtered |
 | `bash /opt/sandbox/hosts/ovh-vps/bootstrap.sh` re-run | completes, changes nothing |
@@ -44,10 +45,12 @@ Run as agent (`./connect.sh agent`):
 | | |
 |---|---|
 | `./connect.sh [agent\|ubuntu]` | Tailscale SSH |
-| `./sync.sh` | Reconcile box with repo (scripts, patterns, Pi, dotfiles, keys, clones) |
+| `./sync.sh` | Reconcile box with repo (scripts, patterns, Pi/omp/Claude Code, dotfiles, keys, clones) |
 | `./ship-keys.sh` | Re-ship SSH/GPG keys after rotation |
 | `./ship-project-env.sh <dir> <target>` | Ship a project's locked dotfile secrets |
 | on box: `pi` | Pi with provider keys injected per-invocation |
+| on box: `omp` | Oh My Pi (Cursor models via locked `CURSOR_API_KEY` → JWT refresh) |
+| on box: `claude` | Claude Code (Claude Pro/Max subscription login — no `ANTHROPIC_API_KEY` required) |
 | on box: `tx` | tmux/tmuxinator layout (default multiplexer) |
 | on box: `hx` | herdr — alternative, agent-aware multiplexer |
 
@@ -57,10 +60,17 @@ Both are installed; pick per session. Each wrapper forces the **agent**
 user so panes can write to `/workspace/fun` and pick up agent's dotfiles.
 
 **`tx` — tmux + tmuxinator (default).** Layout lives at
-`hosts/ovh-vps/tmuxinator/dev.yml`: an `admin` window (`sudo -i` for
-`sync-secrets`), a `sandbox` window running `pi`, and plain shells for
-`fintrack` and `wingman`. Plain `tx` starts it (the project is named
-`dev`, which is `tx`'s default).
+`hosts/ovh-vps/tmuxinator/dev.yml`: a single `sandbox` window running
+`pi`. No admin/root window — agent owns this tmux socket. Plain `tx`
+starts it (project name `dev`, which is `tx`'s default).
+
+**Root / secrets / apt:** use a separate SSH session as ubuntu (not
+agent tmux):
+
+```bash
+./connect.sh ubuntu   # from Mac
+sudo -i               # on the box
+```
 
 **`hx` — [herdr](https://herdr.dev) (alternative).** A Rust multiplexer
 built for coding agents: tmux's pane/tab/session model plus a sidebar
@@ -105,6 +115,10 @@ providers — no models.json needed:
 
 Day-one: DeepSeek PAYG. Subscription trial (GLM Pro vs Kimi) decided
 per the design doc, ~Sept 2026.
+
+**Claude Code** is also installed by `sync.sh`. Auth is Claude Pro/Max
+**subscription login** (`claude` → `/login`), not `ANTHROPIC_API_KEY`.
+Leave the Anthropic key commented out in locked secrets on this host.
 
 ## AWS decommission checklist (on/after 2026-08-14 — NOT before)
 
