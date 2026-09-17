@@ -9,7 +9,7 @@ see credentials in `env`, or reach the internet outside an allowlist.
    ───                                ────────────────
 
    workspaces/                        ┌─ ubuntu (admin)
-   ├ <ws>.secrets.env  ──┐            │   sudo for ops & secret mgmt
+   ├ <ws>.secrets.env  ──┐            │   sudo for ops & [REDACTED]
    └ <ws>.tfvars        ─┤            │
                          ▼            ├─ agent (YOLO claude)
                     terraform apply ──┤   $ claude
@@ -99,6 +99,38 @@ shipped your keypairs — otherwise step 3's `power.sh sync` retries them.
 | `tx fun` | Personal projects layout |
 | `sudo sync-secrets` | Idempotent upsert into `/etc/devbox/locked/secrets` |
 | `sudo run <cmd>` | Invoke `<cmd>` with secrets sourced, as agent |
+
+### Updating omp (do **not** run `omp update`)
+
+`omp` on PATH is a credential wrapper, not the binary:
+
+| Path | Role |
+|---|---|
+| `/usr/local/bin/omp` | → `sudo run` → `omp-with-cursor` |
+| `/usr/local/bin/omp-with-cursor` | refresh Cursor JWT → `/opt/omp/omp` |
+| `/opt/omp/omp` | real Oh My Pi binary |
+
+`omp update` resolves the PATH launcher and would overwrite `/usr/local/bin/omp` (the wrapper). Older `agents/omp/install.sh` could also `mv $(command -v omp)` onto `/opt/omp/omp` and replace the binary with the wrapper — never re-run a stale `/opt/sandbox` copy of that script.
+
+**Safe update** (also what sync/bootstrap does via the current install script):
+
+```bash
+# as ubuntu/root — upgrades /opt/omp/omp only when older than latest GitHub release
+SANDBOX_DIR=/opt/sandbox bash /opt/sandbox/agents/omp/install.sh
+
+# force re-download
+OMP_FORCE_UPDATE=1 SANDBOX_DIR=/opt/sandbox bash /opt/sandbox/agents/omp/install.sh
+```
+
+Manual binary-only restore if needed:
+
+```bash
+sudo curl -fsSL -o /opt/omp/omp.new \
+  https://github.com/can1357/oh-my-pi/releases/latest/download/omp-linux-x64
+sudo chmod +x /opt/omp/omp.new
+/opt/omp/omp.new --version   # expect omp/<latest>
+sudo mv /opt/omp/omp.new /opt/omp/omp
+```
 
 **From your Mac** (all scripts under `hosts/aws-ec2/`):
 

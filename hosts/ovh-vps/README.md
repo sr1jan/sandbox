@@ -54,6 +54,24 @@ Run as agent (`./connect.sh agent`):
 | on box: `tx` | tmux/tmuxinator layout (default multiplexer) |
 | on box: `hx` | herdr — alternative, agent-aware multiplexer |
 
+### Updating omp
+
+Do **not** run `omp update` on this host. `/usr/local/bin/omp` is a
+`sudo run` → `omp-with-cursor` wrapper; the real binary lives at
+`/opt/omp/omp`. Self-update replaces the PATH launcher and can destroy
+the wrapper (or, with a stale install script, overwrite the binary with
+the wrapper and create a launch loop).
+
+`./sync.sh` already re-runs `agents/omp/install.sh`, which upgrades
+`/opt/omp/omp` when GitHub has a newer release and leaves the wrappers
+alone. Force a re-download:
+
+```bash
+OMP_FORCE_UPDATE=1 SANDBOX_DIR=/opt/sandbox bash /opt/sandbox/agents/omp/install.sh
+```
+
+See the root README “Updating omp” section for the manual binary restore.
+
 ## Multiplexers
 
 Both are installed; pick per session. Each wrapper forces the **agent**
