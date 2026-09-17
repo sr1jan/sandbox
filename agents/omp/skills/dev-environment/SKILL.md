@@ -21,6 +21,16 @@ sudo run pytest tests/                 # tests needing API access
 
 NEVER try to read .env files, /etc/devbox/secrets, or run env/printenv. These are blocked.
 
+## Updating omp
+
+Do **not** run `omp update`. On this host:
+
+- `/usr/local/bin/omp` is a wrapper → `sudo run` → `omp-with-cursor`
+- `/opt/omp/omp` is the real binary
+
+`omp update` would overwrite the PATH wrapper. Ask the operator (ubuntu)
+to run sync / `agents/omp/install.sh`, which upgrades only `/opt/omp/omp`.
+
 ## Managing background processes with tmux panes
 
 Use tmux tools to run servers, tests, and log tailers in separate panes:
