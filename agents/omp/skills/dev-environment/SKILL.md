@@ -21,6 +21,11 @@ sudo run pytest tests/                 # tests needing API access
 
 NEVER try to read .env files, /etc/devbox/secrets, or run env/printenv. These are blocked.
 
+`sudo run` loads a project's credentials by mapping the current directory to
+`/etc/devbox/locked/projects/<path under /workspace>`. Run it from the project
+ROOT (e.g. `cd /workspace/fun/agent-studio && sudo run …`). From a
+subdirectory or `/tmp`, the project's keys are silently missing.
+
 ## Updating omp
 
 Do **not** run `omp update`. On this host:
@@ -31,33 +36,36 @@ Do **not** run `omp update`. On this host:
 `omp update` would overwrite the PATH wrapper. Ask the operator (ubuntu)
 to run sync / `agents/omp/install.sh`, which upgrades only `/opt/omp/omp`.
 
-## Managing background processes with tmux panes
+## Running commands: bash first, tmux only when needed
 
-Use tmux tools to run servers, tests, and log tailers in separate panes:
+**Default: the bash tool.** Use it for tests, builds, typechecks, linters and
+one-shot scripts, with `async` for anything long. It returns exit codes, full
+output, and a notice when the run finishes. A tmux pane gives you none of
+that: output is scraped from the screen, a `clear` wipes it, and the job dies
+if the pane does.
 
-1. **Start a server:**
-   - `tmux_pane_create(direction: "vertical", name: "server")`
-   - `tmux_pane_send(pane: "server", keys: "sudo run python -m src.main")`
+**Long-running services (dev servers, workers):** use the bash tool's named
+service mode, which gives a ready check and logs via `proc://`. Use tmux only
+when the user wants to watch the process live.
 
-2. **Watch logs:**
-   - `tmux_pane_create(direction: "horizontal", name: "logs")`
-   - `tmux_pane_send(pane: "logs", keys: "tail -f logs/app.log")`
+**tmux is for credentialed commands the bash tool refuses.** The bash tool's
+credential guard may block `sudo run <cmd>`; `tmux_pane_send` is the
+sanctioned path. When you use it:
 
-3. **Run tests:**
-   - `tmux_pane_create(direction: "vertical", name: "tests")`
-   - `tmux_pane_send(pane: "tests", keys: "sudo run pytest tests/ -v")`
+1. `tmux_pane_create` opens the pane in a dedicated `agent-work` window of
+   this tmux session, in your working directory. It never splits the user's
+   window. Don't create or move panes by hand with raw `tmux` commands.
+2. **Detach anything that outlives a few seconds**, and read results from a
+   file, not the screen:
+   `(sudo run setsid nohup <cmd> > /tmp/<job>.log 2>&1 &)`
+   The job then survives the pane closing. Read `/tmp/<job>.log` with the
+   bash tool.
+3. **Clean up:** `tmux_pane_close` every pane you created. They are also
+   closed when your session ends.
 
-4. **Check output:**
-   - `tmux_pane_capture(pane: "server", lines: 30)`
-   - `tmux_pane_capture(pane: "tests", lines: 50)`
-
-5. **Stop and restart:**
-   - `tmux_pane_send(pane: "server", keys: "C-c", enter: false)` to Ctrl+C
-   - `tmux_pane_send(pane: "server", keys: "sudo run python -m src.main")` to restart
-
-6. **Clean up:**
-   - `tmux_pane_close(pane: "server")`
-   - `tmux_pane_close(pane: "tests")`
+**Subagents can't use tmux:** the tools refuse them. When delegating, say
+"bash only". Read-only scouts don't execute commands at all: the parent runs
+and times things.
 
 ## Creating .env templates for new projects
 

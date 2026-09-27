@@ -21,33 +21,33 @@ sudo run pytest tests/                 # tests needing API access
 
 NEVER try to read .env files, /etc/devbox/secrets, or run env/printenv. These are blocked.
 
-## Managing background processes with tmux panes
+`sudo run` loads a project's credentials by mapping the current directory to
+`/etc/devbox/locked/projects/<path under /workspace>`. Run it from the project
+ROOT (e.g. `cd /workspace/fun/agent-studio && sudo run …`). From a
+subdirectory or `/tmp`, the project's keys are silently missing.
 
-Use tmux tools to run servers, tests, and log tailers in separate panes:
+## Running commands: bash first, tmux only when needed
 
-1. **Start a server:**
-   - `tmux_pane_create(direction: "vertical", name: "server")`
-   - `tmux_pane_send(pane: "server", keys: "sudo run python -m src.main")`
+**Default: your bash/shell tool.** Use it for tests, builds, typechecks,
+linters and one-shot scripts. It returns exit codes and full output. A tmux
+pane gives you neither: output is scraped from the screen, a `clear` wipes
+it, and the job dies if the pane does.
 
-2. **Watch logs:**
-   - `tmux_pane_create(direction: "horizontal", name: "logs")`
-   - `tmux_pane_send(pane: "logs", keys: "tail -f logs/app.log")`
+**tmux is for credentialed commands the shell tool refuses, and for services
+the user wants to watch live.** When you use it:
 
-3. **Run tests:**
-   - `tmux_pane_create(direction: "vertical", name: "tests")`
-   - `tmux_pane_send(pane: "tests", keys: "sudo run pytest tests/ -v")`
+1. `tmux_pane_create` opens the pane in a dedicated `agent-work` window of
+   this tmux session, in your working directory. It never splits the user's
+   window. Don't create or move panes by hand with raw `tmux` commands.
+2. **Detach anything that outlives a few seconds**, and read results from a
+   file, not the screen:
+   `(sudo run setsid nohup <cmd> > /tmp/<job>.log 2>&1 &)`
+   The job then survives the pane closing.
+3. **Clean up:** `tmux_pane_close` every pane you created. They are also
+   closed when your session ends.
 
-4. **Check output:**
-   - `tmux_pane_capture(pane: "server", lines: 30)`
-   - `tmux_pane_capture(pane: "tests", lines: 50)`
-
-5. **Stop and restart:**
-   - `tmux_pane_send(pane: "server", keys: "C-c", enter: false)` to Ctrl+C
-   - `tmux_pane_send(pane: "server", keys: "sudo run python -m src.main")` to restart
-
-6. **Clean up:**
-   - `tmux_pane_close(pane: "server")`
-   - `tmux_pane_close(pane: "tests")`
+**Subagents never use tmux.** The tools refuse any session the host marks as
+a subagent. When delegating, say "shell only".
 
 ## Creating .env templates for new projects
 

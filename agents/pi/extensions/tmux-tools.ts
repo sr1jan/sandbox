@@ -1,9 +1,13 @@
 /**
  * Tmux Tools Extension
  *
- * Gives the agent control over tmux panes for running servers, tests,
- * log tailers, and other background processes. The agent can create panes,
- * send commands, capture output, and close panes.
+ * Gives the MAIN agent tmux panes for the two jobs the shell tool can't do:
+ * credentialed `sudo run` commands its credential guard refuses, and
+ * services the user wants to watch live. Tests, builds and one-shot commands
+ * belong in the shell tool (exit codes, full output).
+ *
+ * Panes open in a dedicated `agent-work` window of the agent's own tmux
+ * session — never split into the window the user is looking at.
  *
  * Security:
  *   - Commands sent to panes go through the same credential guard patterns
@@ -94,8 +98,67 @@ function isInsideTmux(): boolean {
 	return !!process.env.TMUX;
 }
 
-// Track panes created by this extension
-const managedPanes = new Map<string, { tmuxId: string; name: string }>();
+/**
+ * Agent panes live in their own window. A bare `split-window` targets the
+ * attached client's CURRENT window — whatever the user is looking at — so
+ * every pane is placed explicitly. tmux removes the window when its last
+ * pane closes.
+ */
+const WORK_WINDOW = "agent-work";
+
+const shellQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`;
+
+/** The tmux session this agent runs in, not whichever one a client has focused. */
+function agentSessionId(): string {
+	const self = process.env.TMUX_PANE;
+	return tmux(`display-message -p ${self ? `-t ${shellQuote(self)} ` : ""}"#{session_id}"`);
+}
+
+/**
+ * Opens a pane in the agent-work window (creating the window on first use),
+ * starting in the agent's cwd: `sudo run` loads credentials for the project
+ * that contains the current directory.
+ */
+function openWorkPane(direction: "horizontal" | "vertical"): string {
+	const session = agentSessionId();
+	const window = shellQuote(`${session}:${WORK_WINDOW}`);
+	const cwd = shellQuote(process.cwd());
+	const windows = tmux(`list-windows -t ${shellQuote(session)} -F "#{window_name}"`).split("\n");
+	if (!windows.includes(WORK_WINDOW)) {
+		return tmux(
+			`new-window -d -t ${shellQuote(`${session}:`)} -n ${WORK_WINDOW} -c ${cwd} -P -F "#{pane_id}"`,
+		);
+	}
+	const flag = direction === "horizontal" ? "-h" : "-v";
+	const paneId = tmux(`split-window -d ${flag} -t ${window} -c ${cwd} -P -F "#{pane_id}"`);
+	tmux(`select-layout -t ${window} tiled`);
+	return paneId;
+}
+
+/**
+ * The module — and this map — can be shared by several sessions in one
+ * process (subagents). So each pane records the session that created it,
+ * and only that session's shutdown closes it.
+ */
+const managedPanes = new Map<string, { tmuxId: string; name: string; owner: string | undefined }>();
+
+function sessionIdOf(ctx: unknown): string | undefined {
+	return (ctx as { sessionManager?: { getSessionId?: () => string } } | undefined)?.sessionManager?.getSessionId?.();
+}
+
+/** Subagents share the user's tmux session but not their rules: tmux is main-agent only. */
+function subagentRefusal(ctx: unknown) {
+	if ((ctx as { agent?: { kind?: string } } | undefined)?.agent?.kind !== "sub") return undefined;
+	return {
+		content: [
+			{
+				type: "text" as const,
+				text: "Error: tmux tools are for the main agent only. Run commands with the shell tool.",
+			},
+		],
+		details: {},
+	};
+}
 
 export default function (pi: ExtensionAPI) {
 	// --- tmux_pane_create ---
@@ -103,21 +166,21 @@ export default function (pi: ExtensionAPI) {
 		name: "tmux_pane_create",
 		label: "Create tmux pane",
 		description:
-			"Create a new tmux pane in the current window. Use for running servers, tests, log tailers, or any background process. Returns a pane name you can reference in other tmux tools.",
+			"Open a pane in the dedicated `agent-work` tmux window (never the user's window), starting in your working directory. Only for a `sudo run` command the shell tool's credential guard refuses, or a service the user wants to watch live. Tests, builds and one-shot commands go through the shell tool. Main agent only. Returns a pane name for the other tmux tools.",
 		parameters: Type.Object({
-			direction: Type.Union([Type.Literal("horizontal"), Type.Literal("vertical")], {
-				description: "Split direction: horizontal (side-by-side) or vertical (top-bottom)",
-			}),
-			name: Type.String({
-				description: "A short name for this pane (e.g., 'server', 'tests', 'logs')",
-			}),
-			size: Type.Optional(
-				Type.Number({
-					description: "Pane size as percentage (10-80). Default: 50",
+			direction: Type.Optional(
+				Type.Union([Type.Literal("horizontal"), Type.Literal("vertical")], {
+					description: "Split direction inside the agent-work window. Default: vertical",
 				}),
 			),
+			name: Type.String({
+				description: "A short name for this pane (e.g., 'server', 'probe')",
+			}),
 		}),
-		async execute(_id, params, _signal, _onUpdate) {
+		async execute(_id, params, _signal, _onUpdate, ctx?: unknown) {
+			const refusal = subagentRefusal(ctx);
+			if (refusal) return refusal;
+
 			if (!isInsideTmux()) {
 				return {
 					content: [{ type: "text", text: "Error: not running inside a tmux session" }],
@@ -144,17 +207,13 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			const flag = params.direction === "horizontal" ? "-h" : "-v";
-			const size = params.size ? `-p ${Math.min(80, Math.max(10, params.size))}` : "";
-
-			const tmuxId = tmux(`split-window ${flag} ${size} -P -F "#{pane_id}"`);
-			managedPanes.set(params.name, { tmuxId, name: params.name });
-
-			// Switch focus back to the original pane (where pi is running)
-			tmux("last-pane");
+			const tmuxId = openWorkPane(params.direction ?? "vertical");
+			managedPanes.set(params.name, { tmuxId, name: params.name, owner: sessionIdOf(ctx) });
 
 			return {
-				content: [{ type: "text", text: `Created pane '${params.name}' (${params.direction})` }],
+				content: [
+					{ type: "text", text: `Created pane '${params.name}' in tmux window '${WORK_WINDOW}'` },
+				],
 				details: {},
 			};
 		},
@@ -165,7 +224,7 @@ export default function (pi: ExtensionAPI) {
 		name: "tmux_pane_send",
 		label: "Send to tmux pane",
 		description:
-			"Send a command or keystrokes to a named tmux pane. Use 'sudo run <cmd>' for commands that need project/CLI credentials.",
+			"Send a command or keystrokes to a named tmux pane. Credentialed commands: `sudo run <cmd>` from the project root (it loads that project's credentials). Anything that runs longer than a few seconds: `(sudo run setsid nohup <cmd> > /tmp/<job>.log 2>&1 &)`, then read the log with the shell tool, so the job survives the pane.",
 		parameters: Type.Object({
 			pane: Type.String({ description: "Pane name (from tmux_pane_create)" }),
 			keys: Type.String({ description: "Command or keystrokes to send" }),
@@ -175,7 +234,10 @@ export default function (pi: ExtensionAPI) {
 				}),
 			),
 		}),
-		async execute(_id, params, _signal, _onUpdate) {
+		async execute(_id, params, _signal, _onUpdate, ctx?: unknown) {
+			const refusal = subagentRefusal(ctx);
+			if (refusal) return refusal;
+
 			const pane = managedPanes.get(params.pane);
 			if (!pane) {
 				const available = Array.from(managedPanes.keys()).join(", ") || "(none)";
@@ -197,10 +259,10 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
+			// Single-quoted: `$VAR`, `$(…)` and backticks must reach the pane
+			// verbatim, not be expanded by this process's shell first.
 			const enter = params.enter !== false ? "Enter" : "";
-			// Escape special characters for tmux send-keys
-			const escaped = params.keys.replace(/"/g, '\\"');
-			tmux(`send-keys -t ${pane.tmuxId} "${escaped}" ${enter}`);
+			tmux(`send-keys -t ${pane.tmuxId} ${shellQuote(params.keys)} ${enter}`);
 
 			return {
 				content: [{ type: "text", text: `Sent to '${params.pane}': ${params.keys}` }],
@@ -214,7 +276,7 @@ export default function (pi: ExtensionAPI) {
 		name: "tmux_pane_capture",
 		label: "Capture tmux pane output",
 		description:
-			"Capture recent terminal output from a named tmux pane. Output is filtered to redact any credential-like strings. Use to check server logs, test results, or command output.",
+			"Capture recent terminal output from a named tmux pane, with credential-like strings redacted. Screen scrape only: for output you need in full or after the pane is gone, redirect the command to a log file and read it with the shell tool.",
 		parameters: Type.Object({
 			pane: Type.String({ description: "Pane name (from tmux_pane_create)" }),
 			lines: Type.Optional(
@@ -223,7 +285,10 @@ export default function (pi: ExtensionAPI) {
 				}),
 			),
 		}),
-		async execute(_id, params, _signal, _onUpdate) {
+		async execute(_id, params, _signal, _onUpdate, ctx?: unknown) {
+			const refusal = subagentRefusal(ctx);
+			if (refusal) return refusal;
+
 			const pane = managedPanes.get(params.pane);
 			if (!pane) {
 				const available = Array.from(managedPanes.keys()).join(", ") || "(none)";
@@ -268,7 +333,10 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({
 			pane: Type.String({ description: "Pane name to close" }),
 		}),
-		async execute(_id, params, _signal, _onUpdate) {
+		async execute(_id, params, _signal, _onUpdate, ctx?: unknown) {
+			const refusal = subagentRefusal(ctx);
+			if (refusal) return refusal;
+
 			const pane = managedPanes.get(params.pane);
 			if (!pane) {
 				return {
@@ -297,7 +365,10 @@ export default function (pi: ExtensionAPI) {
 		label: "List tmux panes",
 		description: "List all managed tmux panes with their names and status.",
 		parameters: Type.Object({}),
-		async execute(_id, _params, _signal, _onUpdate) {
+		async execute(_id, _params, _signal, _onUpdate, ctx?: unknown) {
+			const refusal = subagentRefusal(ctx);
+			if (refusal) return refusal;
+
 			if (managedPanes.size === 0) {
 				return {
 					content: [{ type: "text", text: "No managed panes. Use tmux_pane_create to create one." }],
@@ -332,15 +403,18 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	pi.on("session_shutdown", async () => {
-		// Clean up all managed panes on exit
+	// Only the panes this session created: a subagent's shutdown must not
+	// kill its parent's panes.
+	pi.on("session_shutdown", async (_event, ctx) => {
+		const session = sessionIdOf(ctx);
 		for (const [name, pane] of managedPanes) {
+			if (pane.owner !== session) continue;
 			try {
 				tmux(`kill-pane -t ${pane.tmuxId}`);
 			} catch {
-				// Ignore
+				// Pane may already be closed
 			}
+			managedPanes.delete(name);
 		}
-		managedPanes.clear();
 	});
 }
