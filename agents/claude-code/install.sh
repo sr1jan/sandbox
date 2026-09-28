@@ -33,12 +33,12 @@ sudo -u "$AGENT_USER" mkdir -p \
   "$AGENT_HOME/.claude/hooks/patterns" \
   "$AGENT_HOME/.claude/skills"
 
-# Hooks
-sudo cp "$SANDBOX_DIR/agents/claude-code/hooks/cred-guard.sh" \
-        "$AGENT_HOME/.claude/hooks/cred-guard.sh"
-sudo cp "$SANDBOX_DIR/agents/claude-code/hooks/redactor.sh" \
-        "$AGENT_HOME/.claude/hooks/redactor.sh"
-sudo chmod +x "$AGENT_HOME/.claude/hooks/"*.sh
+# Hooks. Explicit paths, no glob: the caller (ubuntu) cannot traverse the
+# 750 agent home, so "$AGENT_HOME/.claude/hooks/"*.sh would stay literal.
+for hook in cred-guard.sh redactor.sh; do
+  sudo install -m 755 -o "$AGENT_USER" -g "$AGENT_USER" \
+    "$SANDBOX_DIR/agents/claude-code/hooks/$hook" "$AGENT_HOME/.claude/hooks/$hook"
+done
 
 # Patterns (shared with Pi's extensions)
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json \
