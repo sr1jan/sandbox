@@ -167,7 +167,8 @@ TF_VAR_gh_token_deepreel=GH_TOKEN_DEEPREEL
         for pair in "GH_TOKEN_PERSONAL personal" "GH_TOKEN_DEEPREEL deepreel"; do
           key="${pair%% *}"
           file="${pair##* }"
-          val="$(sudo grep -oP "^export ${key}=\x27\K[^\x27]+" /etc/devbox/locked/secrets 2>/dev/null || true)"
+          # Source like run does, so KEY=value lines without export are read too.
+          val="$(sudo bash -c ". /etc/devbox/locked/secrets >/dev/null 2>&1; printf %s \"\${!1:-}\"" _ "$key" || true)"
           if [ -n "$val" ]; then
             printf "%s" "$val" | sudo tee "/home/agent/.config/gh/tokens/$file" > /dev/null
             sudo chown agent:agent "/home/agent/.config/gh/tokens/$file"
