@@ -16,7 +16,7 @@
 #
 # Expects:
 #   - agent user already exists
-#   - curl, bash, python3 available
+#   - curl, bash available
 #   - $SANDBOX_DIR env var points at the sandbox repo root
 #
 # Optional env:
@@ -24,7 +24,6 @@
 #   - AGENT_USER      (default: agent)
 #   - OMP_REPO        (default: can1357/oh-my-pi)
 #   - OMP_FORCE_UPDATE (default: 0; set to 1 to re-download even if current)
-#   - GITHUB_TOKEN / GH_TOKEN — optional, avoids GitHub API rate limits
 #
 # Usage (called from a host bootstrap / sync):
 #   SANDBOX_DIR=/path/to/sandbox bash agents/omp/install.sh
@@ -79,17 +78,15 @@ omp_current_version() {
 
 omp_latest_release() {
   # Prints: <tag> <version>   e.g. "v18.2.4 18.2.4"
-  local auth=()
-  local token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
-  if [ -n "$token" ]; then
-    auth=(-H "Authorization: Bearer ${token}")
-  fi
-  curl -fsSL "${auth[@]}" \
-    "https://api.github.com/repos/${OMP_REPO}/releases/latest" \
-    | python3 -c 'import sys, json
-d = json.load(sys.stdin)
-tag = d["tag_name"]
-print(tag, tag.lstrip("v"))'
+  # Follows the github.com /releases/latest redirect instead of calling
+  # api.github.com, whose unauthenticated limit (60 req/h per IP) is easily
+  # exhausted on shared VPS addresses.
+  local url tag
+  url="$(curl -fsS -o /dev/null -w '%{redirect_url}' \
+    "https://github.com/${OMP_REPO}/releases/latest")" || return 1
+  tag="${url##*/releases/tag/}"
+  [ -n "$tag" ] && [ "$tag" != "$url" ] || return 1
+  printf '%s %s\n' "$tag" "${tag#v}"
 }
 
 omp_download_binary() {
@@ -126,11 +123,13 @@ omp_is_elf() {
   [ -x "$1" ] && file -b "$1" 2>/dev/null | grep -q 'ELF'
 }
 
-read -r latest_tag latest_version < <(omp_latest_release)
-[ -n "${latest_tag:-}" ] && [ -n "${latest_version:-}" ] || {
+# Command substitution (not `read < <(...)`): a failed lookup must reach the
+# error below instead of tripping `set -e` on read's EOF status.
+if ! latest_release="$(omp_latest_release)"; then
   echo "[omp-install] ERROR: could not resolve latest release for ${OMP_REPO}" >&2
   exit 1
-}
+fi
+read -r latest_tag latest_version <<<"$latest_release"
 
 current=""
 if omp_is_elf "$OMP_BIN"; then
