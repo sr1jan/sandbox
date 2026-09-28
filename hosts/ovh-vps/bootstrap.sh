@@ -60,6 +60,18 @@ fi
 if ! command -v tmuxinator &>/dev/null; then
   sudo gem install tmuxinator
 fi
+# Real gh CLI at /usr/bin/gh. /usr/local/bin/gh (step 4) is only the
+# per-tree token wrapper that execs it, so test the path, not `command -v`.
+# Official repo: Ubuntu's gh lags years behind.
+if [ ! -x /usr/bin/gh ]; then
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg status=none
+  sudo chmod 644 /usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+  sudo apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gh
+fi
 
 # --- [2/8] Tailscale (the only ingress) ---
 echo "[2/8] Joining Tailscale..."
