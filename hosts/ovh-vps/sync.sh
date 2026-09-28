@@ -9,7 +9,18 @@ set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/host.conf"
 
 echo "[sync] Pulling latest /opt/sandbox..."
-tailscale ssh "ubuntu@$TAILNET_HOSTNAME" 'cd /opt/sandbox && sudo git pull --ff-only 2>&1 | tail -3'
+# Capture instead of piping to tail: a failed pull (local changes in the way)
+# must stop the sync, not reinstall everything from a stale tree.
+tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
+  set -e
+  cd /opt/sandbox
+  if ! out="$(sudo git pull --ff-only 2>&1)"; then
+    printf "%s\n" "$out" >&2
+    echo "[sync] ERROR: git pull failed in /opt/sandbox. Set its local changes aside (sudo git -C /opt/sandbox stash push -u) and re-run." >&2
+    exit 1
+  fi
+  printf "%s\n" "$out" | tail -3
+'
 
 echo "[sync] Re-installing scripts, patterns, dotfiles, agents..."
 tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '

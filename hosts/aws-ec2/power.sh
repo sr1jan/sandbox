@@ -61,7 +61,18 @@ case "$ACTION" in
     ;;
   sync)
     echo "[power] Pulling latest /opt/sandbox..."
-    tailscale ssh "ubuntu@$HOSTNAME" 'cd /opt/sandbox && sudo git pull --ff-only 2>&1 | tail -3'
+    # Capture instead of piping to tail: a failed pull (local changes in the
+    # way) must stop the sync, not reinstall everything from a stale tree.
+    tailscale ssh "ubuntu@$HOSTNAME" '
+      set -e
+      cd /opt/sandbox
+      if ! out="$(sudo git pull --ff-only 2>&1)"; then
+        printf "%s\n" "$out" >&2
+        echo "[power] ERROR: git pull failed in /opt/sandbox. Set its local changes aside (sudo git -C /opt/sandbox stash push -u) and re-run." >&2
+        exit 1
+      fi
+      printf "%s\n" "$out" | tail -3
+    '
 
     # Sync global secrets from local .secrets.env → VM /etc/devbox/locked/secrets.
     # Maps TF_VAR_* names to the VM-side key names that bootstrap uses.
