@@ -331,6 +331,10 @@ tmux_conf_copy_to_os_clipboard=false
 # -- user customizations -------------------------------------------------------
 # this is the place to override or undo settings
 
+# tmux server PATH is snapshotted at first launch and does not include
+# ~/.local/bin. Without this, `tmux new-window nvim` hits Ubuntu 0.9.5.
+set-environment -g PATH "/home/agent/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
 # increase history size
 #set -g history-limit 10000
 
