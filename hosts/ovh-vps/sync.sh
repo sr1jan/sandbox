@@ -68,7 +68,7 @@ tailscale ssh "ubuntu@$TAILNET_HOSTNAME" '
     sudo install -d -o agent -g agent -m 700 /home/agent/.gnupg
     sudo cat /etc/devbox/locked/keys/gpg_personal.asc \
       | sudo -u agent gpg --batch --import 2>&1 \
-      | grep -vE "[REDACTED] imported|already in [REDACTED] || true
+      | grep -vE "secret key imported|already in secret keyring" || true
   fi
   sudo install -d -o agent -g agent -m 700 /home/agent/.config/gh/tokens
   if sudo test -f /etc/devbox/locked/secrets; then

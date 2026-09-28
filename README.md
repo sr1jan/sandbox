@@ -9,7 +9,7 @@ see credentials in `env`, or reach the internet outside an allowlist.
    ───                                ────────────────
 
    workspaces/                        ┌─ ubuntu (admin)
-   ├ <ws>.secrets.env  ──┐            │   sudo for ops & [REDACTED]
+   ├ <ws>.secrets.env  ──┐            │   sudo for ops & secret mgmt
    └ <ws>.tfvars        ─┤            │
                          ▼            ├─ agent (YOLO claude)
                     terraform apply ──┤   $ claude
