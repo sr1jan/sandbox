@@ -59,7 +59,8 @@ printf '%s\n' "$merged" | sudo tee "$settings" >/dev/null
 
 # User-level CLAUDE.md — auto-loaded on every session for the agent user.
 # Documents the with_creds / sudo run pattern so bare claude sessions
-# (outside any skill workflow) know how to use credentialed CLIs.
+# (outside any skill workflow) know how to use credentialed CLIs, and the
+# operator's writing rules for chat replies (ASD-STE100 based).
 sudo cp "$SANDBOX_DIR/agents/claude-code/CLAUDE.md" \
         "$AGENT_HOME/.claude/CLAUDE.md"
 
