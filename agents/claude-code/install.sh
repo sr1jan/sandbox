@@ -73,17 +73,20 @@ sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.claude"
 echo "[cc-install] Installing with_creds binary..."
 sudo install -m 755 "$SANDBOX_DIR/shared/scripts/with_creds" /usr/local/bin/with_creds
 
-# Bundled skills shipped with this repo (agents/claude-code/skills/*).
-BUNDLED_SKILLS="$SANDBOX_DIR/agents/claude-code/skills"
-if [ -d "$BUNDLED_SKILLS" ]; then
-  echo "[cc-install] Copying bundled skills..."
-  for skill_dir in "$BUNDLED_SKILLS"/*/; do
+# Skills shipped with this repo: Claude Code's own (agents/claude-code/skills/*)
+# and the harness-neutral ones shared with omp and Pi (shared/skills/*).
+# `cp -rT` copies into an existing skill dir; plain `cp -r src dest/name`
+# nests a second copy at dest/name/name on every re-run.
+for skills_root in "$SANDBOX_DIR/agents/claude-code/skills" "$SANDBOX_DIR/shared/skills"; do
+  [ -d "$skills_root" ] || continue
+  echo "[cc-install] Copying skills from $skills_root..."
+  for skill_dir in "$skills_root"/*/; do
     [ -d "$skill_dir" ] || continue
     skill_name="$(basename "$skill_dir")"
-    sudo cp -r "$skill_dir" "$AGENT_HOME/.claude/skills/$skill_name"
+    sudo cp -rT "$skill_dir" "$AGENT_HOME/.claude/skills/$skill_name"
     sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.claude/skills/$skill_name"
   done
-fi
+done
 
 # Optional skill symlinks if the workspace configured a path.
 if [ -n "${SKILLS_SOURCE_PATH:-}" ] && [ -d "$SKILLS_SOURCE_PATH" ]; then
