@@ -9,6 +9,8 @@ description: Use when downloading YouTube videos, extracting audio clips, or wor
 
 `yt-dlp` is the modern YouTube downloader (fork of youtube-dl). This skill covers common operations.
 
+**Bot check:** if yt-dlp on this VM fails with HTTP 403/429, "Sign in to confirm you're not a bot", or LOGIN_REQUIRED, YouTube is refusing this VM's IP. Retries here do not help: use the `youtube-modal-fetch` skill, which runs yt-dlp on Modal (Google Cloud) and returns metadata, captions, a transcript, audio, or video.
+
 ## Installation Check
 
 ```bash

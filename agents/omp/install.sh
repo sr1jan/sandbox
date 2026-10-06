@@ -4,6 +4,7 @@
 # Installs only sandbox harness pieces:
 #   - cred-guard / redactor / tmux-tools extensions
 #   - dev-environment skill
+#   - shared skills (shared/skills/*, also installed for Claude Code and Pi)
 #   - shared pattern JSONs
 #
 # Binary layout (do NOT run `omp update` on this host):
@@ -47,6 +48,7 @@ sudo -u "$AGENT_USER" mkdir -p \
 
 sudo cp "$SANDBOX_DIR/agents/omp/extensions/"*.ts "$AGENT_HOME/.omp/agent/extensions/"
 sudo cp -r "$SANDBOX_DIR/agents/omp/skills/"* "$AGENT_HOME/.omp/agent/skills/"
+sudo cp -r "$SANDBOX_DIR/shared/skills/"* "$AGENT_HOME/.omp/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.omp/agent/patterns/"
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.omp"
 

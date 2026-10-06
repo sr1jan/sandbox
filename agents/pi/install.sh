@@ -32,6 +32,7 @@ sudo -u "$AGENT_USER" mkdir -p \
 
 sudo cp "$SANDBOX_DIR/agents/pi/extensions/"*.ts "$AGENT_HOME/.pi/agent/extensions/"
 sudo cp -r "$SANDBOX_DIR/agents/pi/skills/"* "$AGENT_HOME/.pi/agent/skills/"
+sudo cp -r "$SANDBOX_DIR/shared/skills/"* "$AGENT_HOME/.pi/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.pi/agent/patterns/"
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.pi"
 
