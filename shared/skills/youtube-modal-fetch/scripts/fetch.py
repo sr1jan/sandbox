@@ -20,10 +20,16 @@ refused stops taking inputs, and the next try lands on a new one. Media
 comes back in chunks from a generator function, so a large video never
 travels as one message.
 
-Only `modal` runs locally; yt-dlp, ffmpeg, Deno and bgutil's PO-token server
-run in the container image. Everything fetched is cached per video id and part
-under ~/.cache/youtube-modal-fetch/, so a repeat call for cached parts does not
-start Modal.
+`--transcript` reads human captions, else automatic ones. When no captions
+match `--langs`, the same container also downloads the audio, and Whisper
+(`WHISPER_MODEL` through faster-whisper) transcribes it on a Modal GPU
+container. That container is not pinned to a cloud or region, because it
+never talks to YouTube.
+
+Only `modal` runs locally; yt-dlp, ffmpeg, Deno, bgutil's PO-token server and
+Whisper run in the container images. Everything fetched, and Whisper's result,
+is cached per video id and part under ~/.cache/youtube-modal-fetch/, so a
+repeat call for cached parts does not start Modal.
 
 stdout: one JSON summary per URL. stderr: progress and errors. Exit 1 when a
 URL failed, 2 on bad arguments.
@@ -37,6 +43,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import html
+import io
 import json
 import os
 import re
@@ -104,6 +111,22 @@ SCALEDOWN_SEC = 10
 # Mono AAC 64 kbps: enough for speech-to-text and listening, ~29 MB/hour.
 AUDIO_ARGS = ["-vn", "-ac", "1", "-c:a", "aac", "-b:a", "64k"]
 DEFAULT_LANGS = "en,en-.*"
+
+# Speech-to-text for --transcript when no captions match --langs: Whisper
+# large-v3-turbo (large-v3 with its decoder cut from 32 layers to 4) through
+# faster-whisper (CTranslate2, float16) on one L4 GPU, sequential with beam
+# search and the silence filter. Sequential, not batched: on a 20-minute talk
+# with human captions (az6OEZV8iHw, 2026-10-06) the word error rate was 2.4%
+# sequential and 4.0% batched (batched dropped 71 words, sequential 15), at
+# 38.5 s and 36.3 s of GPU time.
+FASTER_WHISPER_VERSION = "1.2.1"
+WHISPER_MODEL = "large-v3-turbo"
+WHISPER_DIR = f"/models/{WHISPER_MODEL}"
+WHISPER_GPU = "L4"
+WHISPER_CPU = 2.0
+WHISPER_MEMORY_MIB = 8192
+# Modal's list price for an L4 (modal.com/pricing, 2026-10-06: $0.000222/s).
+GPU_CENTS_PER_SEC = 0.0222
 
 # At most 1500 kbps of video at <=1080p; when every 1080p rendition is over
 # the cap, 720p, then 480p uncapped, then anything (`w`).
@@ -192,6 +215,19 @@ image = (
         "cd /opt/bgutil/server && deno install --allow-scripts=npm:canvas --frozen",
     )
     .env({"BGUTIL_SERVER_HOME": "/opt/bgutil/server"})
+)
+# CTranslate2 loads cuBLAS and cuDNN at run time; the pip wheels ship them.
+# PyAV 19.0.0 (2026-09-29) removed the `metadata_errors` argument of av.open(),
+# which faster-whisper 1.2.1's decode_audio() passes: keep PyAV below 19.
+_NVIDIA_LIBS = "/usr/local/lib/python3.12/site-packages/nvidia"
+whisper_image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .pip_install(f"faster-whisper=={FASTER_WHISPER_VERSION}", "av>=11,<19", "nvidia-cublas-cu12==12.*",
+                 "nvidia-cudnn-cu12==9.*")
+    .env({"LD_LIBRARY_PATH": f"{_NVIDIA_LIBS}/cublas/lib:{_NVIDIA_LIBS}/cudnn/lib"})
+    # The weights go into the image, so a container never downloads them.
+    .run_commands("python -c \"from faster_whisper import download_model; "
+                  f"download_model('{WHISPER_MODEL}', output_dir='{WHISPER_DIR}')\"")
 )
 app = modal.App(APP_NAME, image=image)
 
@@ -294,19 +330,20 @@ def _ytdlp_options(workdir: Path, *, video: bool, audio: bool, pot_url: str) -> 
 
 def _matching(tracks: dict[str, Any] | None, langs: list[str], *, auto: bool) -> dict[str, dict[str, Any]]:
     """lang -> the track's WebVTT format, for languages that fully match one
-    of `langs`. yt-dlp lists the original-language automatic track twice
-    (`en` and `en-orig`, same captions): keep `en`."""
+    of `langs`. An automatic `<lang>-orig` track is YouTube's own speech
+    recognition; the plain `<lang>` entry can be a machine translation into
+    the same language (`tlang` in its URL), for example on a dubbed video
+    that lists several `-orig` tracks. YouTube answered HTTP 429 to such a
+    `tlang` track on 2026-10-06 (3EUsbss8UOw, `en`), so the `-orig` format
+    wins and is stored under the plain name."""
     found: dict[str, dict[str, Any]] = {}
     for lang, formats in (tracks or {}).items():
-        if lang == "live_chat" or not any(re.fullmatch(p, lang) for p in langs):
+        name = lang.removesuffix("-orig") if auto else lang
+        if lang == "live_chat" or not any(re.fullmatch(p, name) or re.fullmatch(p, lang) for p in langs):
             continue
         vtt = next((f for f in formats or [] if f.get("ext") == "vtt" and f.get("url")), None)
-        if vtt:
-            found[lang] = vtt
-    if auto:
-        for lang in [k for k in found if k.endswith("-orig")]:
-            if lang.removesuffix("-orig") in found:
-                del found[lang]
+        if vtt and (name not in found or lang != name):
+            found[name] = vtt
     return found
 
 
@@ -335,7 +372,9 @@ def _fetch_in_container(url: str, want: dict[str, Any], workdir: Path) -> Iterat
     from yt_dlp.utils import DownloadError
 
     pot_url = _pot_provider()
-    options = _ytdlp_options(workdir, video=want["video"], audio=want["audio"], pot_url=pot_url)
+    # The format must be set before extraction; the download decides later.
+    options = _ytdlp_options(workdir, video=want["video"], audio=want["audio"] or want["audio_if_no_captions"],
+                             pot_url=pot_url)
     with YoutubeDL(options) as ydl:
         try:
             info = ydl.extract_info(url, download=False)
@@ -353,6 +392,7 @@ def _fetch_in_container(url: str, want: dict[str, Any], workdir: Path) -> Iterat
             kinds.append(("subs", human))
         if want["auto"] or (want["auto_if_no_subs"] and not (want["subs"] and human)):
             kinds.append(("auto", _matching(info.get("automatic_captions"), want["langs"], auto=True)))
+        got_captions = False
         for kind, tracks in kinds:
             texts: dict[str, str] = {}
             skipped: dict[str, str] = {}
@@ -378,9 +418,12 @@ def _fetch_in_container(url: str, want: dict[str, Any], workdir: Path) -> Iterat
                 if not text.lstrip("﻿").startswith("WEBVTT"):
                     raise _Final(f"YouTube returned no WebVTT for {kind} captions {lang!r}")
                 texts[lang] = text
+            got_captions |= bool(texts)
             yield {"type": "captions", "kind": kind, "files": texts, "skipped": skipped}
 
-        if not (want["audio"] or want["video"]):
+        # Whisper needs the audio only when no captions match --langs.
+        want_audio = want["audio"] or (want["audio_if_no_captions"] and not got_captions)
+        if not (want_audio or want["video"]):
             return
         try:
             done = ydl.process_ie_result(info, download=True)
@@ -390,7 +433,7 @@ def _fetch_in_container(url: str, want: dict[str, Any], workdir: Path) -> Iterat
     media = Path(downloads[0]["filepath"]) if downloads and downloads[0].get("filepath") else None
     if media is None or not media.is_file():
         raise _Final("yt-dlp wrote no media file")
-    if want["audio"]:
+    if want_audio:
         # From the merged MP4 when there is one: it holds the best audio.
         audio = workdir / "audio.m4a"
         result = subprocess.run(["ffmpeg", "-hide_banner", "-nostdin", "-y", "-v", "error", "-i", str(media),
@@ -443,6 +486,36 @@ def remote_fetch(url: str, want: dict[str, Any]) -> Iterator[dict[str, Any]]:
             modal.experimental.stop_fetching_inputs()
 
 
+# Per GPU container process: the model loads once and serves every input.
+_whisper: dict[str, Any] = {}
+
+
+@app.function(image=whisper_image, gpu=WHISPER_GPU, cpu=WHISPER_CPU, memory=WHISPER_MEMORY_MIB,
+              timeout=TIMEOUT_SEC, max_containers=PARALLEL, scaledown_window=SCALEDOWN_SEC)
+def remote_whisper(audio: bytes) -> dict[str, Any]:
+    """Whisper on one GPU container: timed segments, the detected language,
+    and the container's own seconds. The language comes from the first 30 s
+    of speech after the silence filter (up to 4 tries of 30 s when unsure),
+    so a music intro does not decide it."""
+    from faster_whisper import WhisperModel, decode_audio
+
+    started = time.monotonic()
+    if "model" not in _whisper:
+        _whisper["model"] = WhisperModel(WHISPER_DIR, device="cuda", compute_type="float16")
+    samples = decode_audio(io.BytesIO(audio))
+    segments, info = _whisper["model"].transcribe(
+        samples, beam_size=5, vad_filter=True, condition_on_previous_text=True, language_detection_segments=4)
+    # A segment that starts after the audio ends is a hallucination: on a
+    # 142-minute talk (cFx9Z3ZXca0, 2026-10-06) Whisper repeated its last
+    # sentence 21 times in 1 s segments, up to 22 s past the end.
+    timed = [(round(s.start, 2), round(s.end, 2), " ".join(s.text.split())) for s in segments
+             if s.start < info.duration]
+    return {"segments": [s for s in timed if s[2]], "language": info.language,
+            "probability": round(info.language_probability, 3), "audio_sec": round(info.duration, 1),
+            "speech_sec": round(info.duration_after_vad, 1), "sec": time.monotonic() - started,
+            "where": _where()}
+
+
 # ------------------------------------------------------------ transcript
 
 _CUE_TIME = re.compile(r"^\s*((?:\d+:)?\d{1,2}:\d{2}[.,]\d{1,3})\s+-->")
@@ -479,10 +552,13 @@ def parse_vtt(text: str) -> list[tuple[float, list[str]]]:
     return cues
 
 
-def transcript_lines(cues: list[tuple[float, list[str]]]) -> list[tuple[float, str]]:
+def transcript_lines(cues: list[tuple[float, list[str]]], *, rolling: bool = True) -> list[tuple[float, str]]:
     """Each caption line once. YouTube's automatic captions roll: a cue
     repeats the previous cue's last line(s) above its new line, so the longest
-    prefix of a cue that equals a suffix of the previous cue is dropped."""
+    prefix of a cue that equals a suffix of the previous cue is dropped.
+    Whisper's segments do not roll (`rolling=False`): a repeat is speech."""
+    if not rolling:
+        return [(start, line) for start, lines in cues for line in lines]
     out: list[tuple[float, str]] = []
     previous: list[str] = []
     for start, lines in cues:
@@ -500,10 +576,10 @@ def _hms(sec: float) -> str:
     return f"{s // 3600:02d}:{s % 3600 // 60:02d}:{s % 60:02d}"
 
 
-def build_transcript(vtt: str) -> str:
+def build_transcript(vtt: str, *, rolling: bool = True) -> str:
     """`[hh:mm:ss] text` per paragraph; a `>>` (speaker change) starts one."""
     paragraphs: list[tuple[float, list[str]]] = []
-    for start, line in transcript_lines(parse_vtt(vtt)):
+    for start, line in transcript_lines(parse_vtt(vtt), rolling=rolling):
         if paragraphs:
             begun, words = paragraphs[-1]
             span = start - begun
@@ -513,6 +589,15 @@ def build_transcript(vtt: str) -> str:
                 continue
         paragraphs.append((start, [line]))
     return "".join(f"[{_hms(start)}] {' '.join(words)}\n" for start, words in paragraphs)
+
+
+def whisper_vtt(segments: list[list[Any]]) -> str:
+    """Whisper's (start, end, text) segments as WebVTT."""
+    def stamp(sec: float) -> str:
+        ms = round(sec * 1000)
+        return f"{ms // 3_600_000:02d}:{ms // 60_000 % 60:02d}:{ms // 1000 % 60:02d}.{ms % 1000:03d}"
+
+    return "WEBVTT\n\n" + "".join(f"{stamp(start)} --> {stamp(end)}\n{text}\n\n" for start, end, text in segments)
 
 
 # ------------------------------------------------------------ local side
@@ -559,7 +644,8 @@ def cache_root() -> Path:
 class Cache:
     """One video's cached parts: info.json, captions.json (langs spec ->
     languages fetched, per kind; [] means none matched), <kind>.<lang>.vtt,
-    audio.m4a, video.mp4."""
+    audio.m4a, video.mp4, and Whisper's whisper.vtt with whisper.json (model,
+    language)."""
 
     dir: Path
 
@@ -574,6 +660,14 @@ class Cache:
     @property
     def video(self) -> Path:
         return self.dir / "video.mp4"
+
+    @property
+    def whisper(self) -> Path:
+        return self.dir / "whisper.vtt"
+
+    @property
+    def whisper_meta(self) -> Path:
+        return self.dir / "whisper.json"
 
     def captions(self) -> dict[str, dict[str, list[str]]]:
         try:
@@ -593,6 +687,14 @@ class Cache:
         manifest[kind][spec] = sorted(texts)
         _atomic_write(self.dir / "captions.json", json.dumps(manifest, indent=2).encode())
 
+    def store_whisper(self, result: dict[str, Any]) -> None:
+        """whisper.json first: whisper.vtt marks Whisper as done."""
+        meta = {"model": WHISPER_MODEL, **{k: result[k] for k in ("language", "probability", "audio_sec",
+                                                                   "speech_sec")},
+                "segments": len(result["segments"])}
+        _atomic_write(self.whisper_meta, json.dumps(meta, indent=2).encode())
+        _atomic_write(self.whisper, whisper_vtt(result["segments"]).encode())
+
 
 def _atomic_write(path: Path, data: bytes) -> None:
     tmp = path.with_name(path.name + ".part")
@@ -609,6 +711,7 @@ class Job:
     tries: int = 0
     refused: int = 0
     modal_sec: float = 0.0
+    whisper_sec: float = 0.0
     bytes_returned: int = 0
     fetched: list[str] = field(default_factory=list)
     placements: list[str] = field(default_factory=list)
@@ -622,7 +725,7 @@ def needed(cache: Cache, args: argparse.Namespace, spec: str, langs: list[str]) 
     manifest = cache.captions()
     subs_known, auto_known = spec in manifest["subs"], spec in manifest["auto"]
     want = {"langs": langs, "subs": False, "auto": False, "auto_if_no_subs": False, "audio": False,
-            "video": False}
+            "audio_if_no_captions": False, "video": False}
     want["subs"] = (args.subs or args.transcript) and not subs_known
     want["auto"] = args.auto_subs and not auto_known
     # The transcript reads human captions first, automatic ones only without.
@@ -630,9 +733,22 @@ def needed(cache: Cache, args: argparse.Namespace, spec: str, langs: list[str]) 
                                and not (subs_known and manifest["subs"][spec]))
     want["audio"] = args.audio and not cache.audio.is_file()
     want["video"] = args.video and not cache.video.is_file()
-    if any(want[k] for k in ("subs", "auto", "auto_if_no_subs", "audio", "video")) or not cache.info.is_file():
+    # Whisper needs the audio when no captions match; only the container
+    # knows which captions exist, so it decides.
+    want["audio_if_no_captions"] = (args.transcript and not cache.audio.is_file() and not cache.whisper.is_file()
+                                    and not any(manifest[k].get(spec) for k in ("subs", "auto")))
+    if any(want[k] for k in ("subs", "auto", "auto_if_no_subs", "audio", "audio_if_no_captions", "video")) \
+            or not cache.info.is_file():
         return want
     return None
+
+
+def whisper_needed(cache: Cache, args: argparse.Namespace, spec: str, langs: list[str]) -> bool:
+    """--transcript with nothing to read: both caption kinds are known for
+    this --langs, none match, and Whisper has not run on this video."""
+    manifest = cache.captions()
+    return (args.transcript and not cache.whisper.is_file() and spec in manifest["subs"]
+            and spec in manifest["auto"] and _transcript_source(manifest, spec, langs) is None)
 
 
 def _is_pinning_error(e: BaseException) -> bool:
@@ -649,6 +765,16 @@ def _hint(e: BaseException) -> str:
         return (f"{text} -- Modal has no credentials. On the deepreel sandbox VM, prefix the command with "
                 "with_creds. Elsewhere run `modal token new`, or set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET.")
     return text
+
+
+def process_job(job: Job, cache: Cache, args: argparse.Namespace, spec: str, langs: list[str]) -> None:
+    """The YouTube fetch when the cache lacks a part, then Whisper when
+    --transcript found no captions."""
+    if job.want is not None:
+        fetch_job(job, cache, spec)
+    if job.error is None and whisper_needed(cache, args, spec, langs):
+        job.done = False
+        whisper_job(job, cache, spec)
 
 
 def fetch_job(job: Job, cache: Cache, spec: str) -> None:
@@ -727,6 +853,30 @@ def _try_containers(job: Job, cache: Cache, spec: str) -> None:
     job.error = f"YouTube refused {MAX_TRIES} containers in a row; the last reason: {reason}"
 
 
+def whisper_job(job: Job, cache: Cache, spec: str) -> None:
+    """Whisper on the cached audio, on a GPU container."""
+    if not cache.audio.is_file():
+        job.error = f"no captions match --langs {spec}, and no audio was fetched for Whisper"
+        return
+    minutes = (json.loads(cache.info.read_text()).get("duration") or 0) / 60
+    log(f"{job.vid}: no captions match --langs {spec}; Whisper {WHISPER_MODEL} transcribes {minutes:.0f} min "
+        f"of audio on an {WHISPER_GPU} GPU")
+    started = time.monotonic()
+    try:
+        result = remote_whisper.remote(cache.audio.read_bytes())
+    except Exception as e:  # noqa: BLE001 — a GPU container that failed or ended mid-call
+        job.whisper_sec += time.monotonic() - started
+        job.error = f"Whisper failed: {_hint(e)}"
+        log(f"{job.vid}: {job.error}")
+        return
+    job.whisper_sec += result["sec"]
+    cache.store_whisper(result)
+    job.fetched.append("whisper")
+    job.done = True
+    log(f"{job.vid}: Whisper done on {result['where']} in {result['sec']:.0f} s: {len(result['segments'])} "
+        f"segments, speech in {result['language']} (p={result['probability']:.2f})")
+
+
 def _place(src: Path, dest: Path) -> None:
     """dest as a hard link to the cached file (no second copy of a video),
     or a copy across file systems."""
@@ -738,7 +888,11 @@ def _place(src: Path, dest: Path) -> None:
 
 
 def summarize(job: Job, args: argparse.Namespace, spec: str, langs: list[str]) -> dict[str, Any]:
-    cents = job.modal_sec * (CPU * CPU_CENTS_PER_CORE_SEC + MEMORY_MIB / 1024 * MEMORY_CENTS_PER_GIB_SEC)
+    fetch_cents = (job.modal_sec * (CPU * CPU_CENTS_PER_CORE_SEC + MEMORY_MIB / 1024 * MEMORY_CENTS_PER_GIB_SEC)
+                   * region_multiplier(REGIONS))
+    # The GPU container has no region pin, so base prices apply.
+    whisper_cents = job.whisper_sec * (GPU_CENTS_PER_SEC + WHISPER_CPU * CPU_CENTS_PER_CORE_SEC
+                                       + WHISPER_MEMORY_MIB / 1024 * MEMORY_CENTS_PER_GIB_SEC)
     summary: dict[str, Any] = {"url": job.url, "id": job.vid, "ok": job.error is None}
     if job.error:
         summary["error"] = job.error
@@ -762,17 +916,21 @@ def summarize(job: Job, args: argparse.Namespace, spec: str, langs: list[str]) -
                 missing.append(f"{key}: no {'human' if kind == 'subs' else 'automatic'} captions match --langs {spec}")
         if args.transcript:
             source = _transcript_source(manifest, spec, langs)
+            transcript = ""
             if source:
                 kind, lang = source
-                (outdir / "transcript.txt").write_text(build_transcript(cache.caption(kind, lang).read_text()))
-                files["transcript"] = str(outdir / "transcript.txt")
+                transcript = build_transcript(cache.caption(kind, lang).read_text())
                 summary["transcript_source"] = f"{'human' if kind == 'subs' else 'automatic'} captions, {lang}"
-            elif spec in manifest["subs"] and spec in manifest["auto"]:
-                own = [k.removesuffix("-orig") for k in info.get("caption_langs", {}).get("auto", [])
-                       if k.endswith("-orig")]
-                hint = f"; the video's own automatic captions are in {own[0]}: try --langs {own[0]}" if own else ""
-                missing.append(f"transcript: no captions match --langs {spec}{hint}; "
-                               "for speech-to-text use --audio")
+            elif cache.whisper.is_file():
+                meta = json.loads(cache.whisper_meta.read_text())
+                transcript = build_transcript(cache.whisper.read_text(), rolling=False)
+                summary["transcript_source"] = (f"Whisper {meta['model']}, speech in {meta['language']} "
+                                                f"(detected, p={meta['probability']:.2f})")
+                if not transcript:
+                    missing.append(f"transcript: no captions match --langs {spec}, and Whisper heard no speech")
+            if transcript:
+                (outdir / "transcript.txt").write_text(transcript)
+                files["transcript"] = str(outdir / "transcript.txt")
         for flag, part, path in ((args.audio, "audio", cache.audio), (args.video, "video", cache.video)):
             if flag and path.is_file():
                 _place(path, outdir / path.name)
@@ -784,10 +942,10 @@ def summarize(job: Job, args: argparse.Namespace, spec: str, langs: list[str]) -
                     for track, why in job.skipped.items()]
         if missing:
             summary["missing"] = missing
-    summary |= {"from_cache": job.tries == 0 and job.error is None, "fetched": list(dict.fromkeys(job.fetched)),
+    summary |= {"from_cache": job.error is None and not job.fetched, "fetched": list(dict.fromkeys(job.fetched)),
                 "tries": job.tries,
                 "refused": job.refused, "modal_sec": round(job.modal_sec, 1),
-                "est_cents": round(cents * region_multiplier(REGIONS), 3),
+                "whisper_sec": round(job.whisper_sec, 1), "est_cents": round(fetch_cents + whisper_cents, 3),
                 "bytes_returned": job.bytes_returned, "placements": job.placements}
     return summary
 
@@ -817,7 +975,8 @@ def main() -> int:
     parser.add_argument("--langs", default=DEFAULT_LANGS,
                         help=f"caption languages: comma-separated regexes, full match (default: {DEFAULT_LANGS})")
     parser.add_argument("--transcript", action="store_true",
-                        help="transcript.txt from the best captions (human, else automatic), [hh:mm:ss] per paragraph")
+                        help="transcript.txt, [hh:mm:ss] per paragraph, from the best captions (human, else "
+                             "automatic); without captions in --langs, from Whisper speech-to-text on a GPU")
     parser.add_argument("--audio", action="store_true", help="audio.m4a: best audio, mono AAC 64 kbps")
     parser.add_argument("--video", action="store_true", help="video.mp4: <=1080p, video <=1500 kbps")
     parser.add_argument("--out", default="youtube", metavar="DIR",
@@ -849,15 +1008,16 @@ def main() -> int:
             continue
         if job.vid in todo:
             continue
-        job.want = needed(Cache(cache_root() / job.vid), args, spec, langs)
-        if job.want is not None:
+        cache = Cache(cache_root() / job.vid)
+        job.want = needed(cache, args, spec, langs)
+        if job.want is not None or whisper_needed(cache, args, spec, langs):
             todo[job.vid] = job
         else:
             log(f"{job.vid}: everything requested is cached; Modal not started")
 
     if todo:
-        log(f"starting an ephemeral Modal app for {len(todo)} video(s) on {placement_text()}; "
-            "the first run in a workspace builds the image "
+        log(f"starting an ephemeral Modal app for {len(todo)} video(s): yt-dlp on {placement_text()}, Whisper "
+            "(only without captions) on a GPU anywhere; the first run in a workspace builds the images "
             "(it can take a few minutes)")
         try:
             with contextlib.ExitStack() as stack:
@@ -866,7 +1026,8 @@ def main() -> int:
                     stack.enter_context(modal.enable_output())
                 stack.enter_context(app.run())
                 with ThreadPoolExecutor(PARALLEL) as pool:
-                    list(pool.map(lambda j: fetch_job(j, Cache(cache_root() / j.vid), spec), todo.values()))
+                    list(pool.map(lambda j: process_job(j, Cache(cache_root() / j.vid), args, spec, langs),
+                                  todo.values()))
         except Exception as e:  # noqa: BLE001 — the app did not start (credentials, placement, image)
             message = _hint(e)
             log(f"Modal failed: {message}")
