@@ -10,6 +10,7 @@
 #   - AGENT_HOME   (default: /home/agent)
 #   - AGENT_USER   (default: agent)
 #   - PI_PACKAGE   (default: @earendil-works/pi-coding-agent)
+#   - PI_VERSION   (default: latest; npm tag or version, e.g. 1.0.4)
 #
 # Usage (called from a host bootstrap):
 #   SANDBOX_DIR=/path/to/sandbox bash agents/pi/install.sh
@@ -20,6 +21,7 @@ set -euo pipefail
 : "${AGENT_HOME:=/home/agent}"
 : "${AGENT_USER:=agent}"
 : "${PI_PACKAGE:=@earendil-works/pi-coding-agent}"
+: "${PI_VERSION:=latest}"
 
 echo "[pi-install] Setting up Pi extensions, skills, and patterns..."
 
@@ -33,15 +35,19 @@ sudo cp -r "$SANDBOX_DIR/agents/pi/skills/"* "$AGENT_HOME/.pi/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.pi/agent/patterns/"
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.pi"
 
-echo "[pi-install] Installing $PI_PACKAGE into /opt/pi..."
+echo "[pi-install] Installing $PI_PACKAGE@$PI_VERSION into /opt/pi..."
 sudo mkdir -p /opt/pi
 if [ ! -f /opt/pi/package.json ]; then
   ( cd /opt/pi && sudo npm init -y >/dev/null )
 fi
-( cd /opt/pi && sudo npm install "$PI_PACKAGE" )
+# Always pass an explicit tag/version. A bare `npm install $PI_PACKAGE`
+# keeps the range already saved in package.json, and a 0.x caret range
+# (^0.85.1) never moves past 0.85.x — that left the box 13 releases behind.
+( cd /opt/pi && sudo npm install "$PI_PACKAGE@$PI_VERSION" )
 
 PI_BIN="/opt/pi/node_modules/.bin/pi"
 [ -x "$PI_BIN" ] || { echo "[pi-install] ERROR: $PI_BIN not found after install" >&2; exit 1; }
+echo "[pi-install] Installed $PI_PACKAGE $(node -p "require('/opt/pi/node_modules/$PI_PACKAGE/package.json').version")"
 
 # Install `pi` wrapper on PATH. Wraps via `sudo run` so provider API keys
 # are sourced from /etc/devbox/locked/secrets at invocation time — never
