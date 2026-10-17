@@ -6,6 +6,7 @@
 #   - dev-environment skill
 #   - shared skills (shared/skills/*, also installed for Claude Code and Pi)
 #   - shared pattern JSONs
+#   - user-level AGENTS.md (agents/omp/AGENTS.md)
 #
 # Binary layout (do NOT run `omp update` on this host):
 #   /usr/local/bin/omp            → sudo run → omp-with-cursor
@@ -50,6 +51,12 @@ sudo cp "$SANDBOX_DIR/agents/omp/extensions/"*.ts "$AGENT_HOME/.omp/agent/extens
 sudo cp -r "$SANDBOX_DIR/agents/omp/skills/"* "$AGENT_HOME/.omp/agent/skills/"
 sudo cp -r "$SANDBOX_DIR/shared/skills/"* "$AGENT_HOME/.omp/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.omp/agent/patterns/"
+
+# User-level AGENTS.md — loaded into every omp session for the agent user, in
+# every project. Holds the operator's writing rules (same rules as
+# agents/claude-code/CLAUDE.md) plus omp notes for this VM. Replaces any copy
+# edited only on the VM, so the repo stays the one source.
+sudo cp "$SANDBOX_DIR/agents/omp/AGENTS.md" "$AGENT_HOME/.omp/agent/AGENTS.md"
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.omp"
 
 # --- binary install / update (targets /opt/omp/omp only) -----------------
