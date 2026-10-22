@@ -23,3 +23,10 @@ SUDOERS="$BATS_TEST_DIRNAME/../agent"
   grep -E '^Defaults env_keep \+= "' "$SUDOERS" | grep -E '\bHERDR_TAB_ID\b'
   grep -E '^Defaults env_keep \+= "' "$SUDOERS" | grep -E '\bHERDR_WORKSPACE_ID\b'
 }
+
+@test "env_keep preserves tern pane identity for sudo run omp" {
+  grep -E '^Defaults env_keep \+= "' "$SUDOERS" | grep -E '\bTERN_PANE\b'
+  grep -E '^Defaults env_keep \+= "' "$SUDOERS" | grep -E '\bTERN_PANE_SOCKET\b'
+  grep -E '^Defaults env_keep \+= "' "$SUDOERS" | grep -E '\bTERN_WINDOW_KEY\b'
+  grep -E '^Defaults env_keep \+= "' "$SUDOERS" | grep -E '\bTERN_WINDOW_SOCKET\b'
+}

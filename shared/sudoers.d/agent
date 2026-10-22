@@ -19,4 +19,11 @@ agent ALL=(root) NOPASSWD: /usr/local/bin/run *
 # they reach the real pi process. They are session/socket IDs, not
 # secrets. Without this, sudo env_reset drops them and the pane stays
 # agent_status=unknown. Same threat posture as TMUX above.
-Defaults env_keep += "TMUX TMUX_PANE HERDR_ENV HERDR_PANE_ID HERDR_SESSION HERDR_SOCKET_PATH HERDR_TAB_ID HERDR_WORKSPACE_ID"
+#
+# Preserve Tern pane identity across `sudo run` (the /usr/local/bin/omp
+# wrapper). Tern injects these into every pane; omp's browser tool opens
+# Tern browser blocks only when TERN_PANE and TERN_PANE_SOCKET reach the
+# real omp process, and `tern` commands target the window through
+# TERN_WINDOW_KEY / TERN_WINDOW_SOCKET. They are pane IDs and socket
+# paths, not secrets. Same threat posture as TMUX above.
+Defaults env_keep += "TMUX TMUX_PANE HERDR_ENV HERDR_PANE_ID HERDR_SESSION HERDR_SOCKET_PATH HERDR_TAB_ID HERDR_WORKSPACE_ID TERN_PANE TERN_PANE_SOCKET TERN_WINDOW_KEY TERN_WINDOW_SOCKET"
