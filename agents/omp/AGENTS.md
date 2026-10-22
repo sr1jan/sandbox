@@ -24,7 +24,7 @@ I read your replies quickly, in a terminal, and often after a long break. Englis
 3. **Use one name for one thing, and one meaning for one word (STE 1.11, 9.4, 1.3).**
    - Use the name that I or the source document used. Do not make up a second name. One deck must not become "master shell", "sample deck", and "reference deck".
    - Do not use one label for two things, for example "A" and "B" for both checkpoints and options, or "preview" for a file and a step.
-   - When you refer to a numbered item again, keep its number and repeat its title: "topic 1 (the M1 mapping)". Do not change 1/2/3 to a/b/c.
+   - When you refer to a numbered or named item again, keep its number and repeat a short description every time, also in tables and in replies to another session's output: "topic 1 (the M1 mapping)", "defect 2 (a key or token in the repo, logs or browser)", "gap 7 (what 'pure-function steps' means)". Do not change 1/2/3 to a/b/c.
    - When "this", "that", or "it" can point to more than one thing, write the noun (STE GR-3, GR-4).
 4. **Write each step that I must do as one action on one numbered line (STE 5.2, 5.3, 5.4).** Use the imperative. Put the condition first: "If X, do Y." Say where to do the step and as which user. Give one procedure, not two alternatives. Do not put an instruction inside a descriptive paragraph.
 5. **Put a caution before each destructive, irreversible, costly, or security-relevant step (STE 7.1–7.3).** Write "CAUTION:", the hazard, and the result, before the step. Make sure that the result is true before you write it. Examples: deleting files, removing a binary, a sync that overwrites dotfiles, a key with more access than the task needs.
@@ -41,6 +41,7 @@ I read your replies quickly, in a terminal, and often after a long break. Englis
     - Do not use Latin abbreviations. Write "for example", "that is", "through", and "compared to", not e.g., i.e., via, and vs. (STE GR-6).
     - Do not put more than three nouns in a row (STE 2.1).
     - Use one verb, not a phrasal verb: "stop", "use", "total", not "fall away", "fall back on", "add up" (STE 9.3).
+    - Give the full absolute path of every file that you mention, for example `/workspace/fun/enacture/deliverables/build/kickoff_prompt.md`, not `deliverables/build/kickoff_prompt.md` or a bare file name. My terminal (Tern) opens a file only from its full path.
 
 ## Do not apply
 
@@ -73,7 +74,10 @@ This file comes from the sandbox repo (`/workspace/fun/sandbox/agents/omp/AGENTS
 - If that URL does not answer (for example, after a reboot), start the server again as a long-running service: `npx --yes http-server@14 ~/tailnet-share -a 100.82.214.30 -p 8090 -c-1 --no-dotfiles`.
 - Tailscale Serve (HTTPS) is not enabled on this tailnet. Enabling it needs an admin action in the Tailscale console, so ask me before you rely on it.
 
-## Accounts you must not touch
+## Accounts with access limits
 
-- My Vercel account `sr1jan` has a team named "Portal" (slug `portal24`, id `team_RGhMbAIC0DRIxqG95CftOvFi`, Pro plan). It is access to my paid contract work. Never use, list, deploy to, create sandboxes in, or change anything in that team, in any project.
+- My Vercel account `sr1jan` has a team named "Portal" (slug `portal24`, id `team_RGhMbAIC0DRIxqG95CftOvFi`, Pro plan). It is Enacture's team, for my paid contract work.
+- Only omp sessions that work on Enacture (in `/workspace/fun/enacture` or `/workspace/fun/enacture-platform`) may use the "Portal" team. They use the `VERCEL_TOKEN` in `/workspace/fun/enacture/.env.local` through `with_creds`.
+- The `GH_TOKEN` in that file is a classic GitHub token, so it reaches every repo of my GitHub account. Use it only for `enacture/enacture-platform`. Call it as `with_creds /usr/bin/gh …`, because the `gh` wrapper in `/usr/local/bin` replaces `GH_TOKEN` with my personal token under `/workspace/fun/`.
+- All other sessions must never use, list, deploy to, create sandboxes in, or change anything in the "Portal" team, in any project.
 - Pass an explicit `--scope` to every `vercel` command, so that no command falls back to the "Portal" team.
