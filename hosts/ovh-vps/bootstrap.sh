@@ -42,7 +42,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   sudo gosu less jq unzip \
   python3 python3-venv build-essential \
   openssh-client ca-certificates \
-  iptables iptables-persistent \
+  iptables iptables-persistent uidmap slirp4netns \
   ruby bats shellcheck
 
 if ! command -v node &>/dev/null; then
@@ -99,7 +99,24 @@ echo "[3/8] Creating agent user and /workspace/fun..."
 if ! id agent &>/dev/null; then
   sudo useradd -m -s /bin/bash agent
 fi
-sudo usermod -aG docker agent
+# Docker runs rootless for agent. The docker group grants root-level
+# privileges (Docker docs), so a container could mount /etc/devbox/locked.
+# Rootful containers also bypass the OUTPUT egress allowlist below, because
+# their traffic goes through FORWARD. A rootless container runs in agent's
+# user namespace, its traffic leaves through slirp4netns (an agent process,
+# so OUTPUT applies), and its published ports arrive on lo.
+sudo gpasswd -d agent docker &>/dev/null || true
+sudo loginctl enable-linger agent
+AGENT_RUNTIME_DIR="/run/user/$(id -u agent)"
+for _ in $(seq 1 10); do [ -d "$AGENT_RUNTIME_DIR" ] && break; sleep 1; done
+if [ ! -S "$AGENT_RUNTIME_DIR/docker.sock" ]; then
+  sudo -u agent XDG_RUNTIME_DIR="$AGENT_RUNTIME_DIR" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$AGENT_RUNTIME_DIR/bus" \
+    dockerd-rootless-setuptool.sh install --force
+fi
+if ! sudo -u agent grep -q 'DOCKER_HOST=' /home/agent/.bashrc; then
+  sudo -u agent sed -i '0,/^# If not running interactively/s//export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-\/run\/user\/$(id -u)}"\nexport DOCKER_HOST="unix:\/\/${XDG_RUNTIME_DIR}\/docker.sock"\n\n&/' /home/agent/.bashrc
+fi
 sudo mkdir -p /workspace/fun
 sudo chown agent:agent /workspace/fun
 
