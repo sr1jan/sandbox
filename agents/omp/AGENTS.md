@@ -41,7 +41,7 @@ I read your replies quickly, in a terminal, and often after a long break. Englis
     - Do not use Latin abbreviations. Write "for example", "that is", "through", and "compared to", not e.g., i.e., via, and vs. (STE GR-6).
     - Do not put more than three nouns in a row (STE 2.1).
     - Use one verb, not a phrasal verb: "stop", "use", "total", not "fall away", "fall back on", "add up" (STE 9.3).
-    - Give the full absolute path of every file that you mention, for example `/workspace/fun/personal-brand/drafts/kickoff.md`, not `deliverables/build/kickoff_prompt.md` or a bare file name. My terminal (Tern) opens a file only from its full path.
+    - Give the full absolute path of every file that you mention, for example `/workspace/fun/personal-brand/drafts/kickoff.md`, not `drafts/kickoff.md` or a bare file name. My terminal (Tern) opens a file only from its full path.
 
 ## Do not apply
 
@@ -65,19 +65,9 @@ I read your replies quickly, in a terminal, and often after a long break. Englis
 
 In omp, this file shadows `~/.claude/CLAUDE.md`. That file has the credential conventions for this VM (`with_creds`, `sudo run`, blocked commands). Read it before you run a command that needs credentials.
 
-This file comes from the sandbox repo (`/workspace/fun/sandbox/agents/omp/AGENTS.md`). `agents/omp/install.sh` copies it to `~/.omp/agent/AGENTS.md` on each sync, so edit the repo copy; a sync replaces edits made only to `~/.omp/agent/AGENTS.md`.
+This file comes from the sandbox repo (`/workspace/fun/sandbox/agents/omp/AGENTS.md`). `agents/omp/install.sh` copies it to `~/.omp/agent/AGENTS.md` on each sync, so edit the repo copy; a sync replaces edits made only to `~/.omp/agent/AGENTS.md`. If the local file `~/.omp/agent/AGENTS.local.md` exists, `install.sh` adds its text at the end of `~/.omp/agent/AGENTS.md`. The local file is not in the repo. It holds the file-sharing server details for this VM and the rules for accounts with access limits. Edit those rules in the local file.
 
 ## Sharing files with me
 
 - Host files that I need to look at (videos, HTML reports, images) on the tailnet by default, and give me the tailnet URL. Offer a copy command only when I need the file on my own computer.
-- On this VM, an `http-server` process serves `~/tailnet-share` at `http://TAILNET-HOST:8090/`. It is bound only to the tailnet IP `TAILNET-IP`, so it is not public. To share a file or folder, create a symlink to it in `~/tailnet-share`, check the URL with `curl`, and then give me the URL.
-- If that URL does not answer (for example, after a reboot), start the server again as a long-running service: `npx --yes http-server@14 ~/tailnet-share -a TAILNET-IP -p 8090 -c-1 --no-dotfiles`.
 - Tailscale Serve (HTTPS) is not enabled on this tailnet. Enabling it needs an admin action in the Tailscale console, so ask me before you rely on it.
-
-## Accounts with access limits
-
-- My Vercel account `sr1jan` has a team named "CLIENT-TEAM" (slug `TEAM-SLUG`, id `TEAM-ID`, Pro plan). It is the client's team, for my paid contract work.
-- Only omp sessions that work on client (in `CLIENT-DIR` or `CLIENT-DIR-2`) may use the "CLIENT-TEAM" team. They use the `VERCEL_TOKEN` in `CLIENT-ENV-FILE` through `with_creds`.
-- The `GH_TOKEN` in that file is a classic GitHub token, so it reaches every repo of my GitHub account. Use it only for `CLIENT-REPO`. Call it as `with_creds /usr/bin/gh …`, because the `gh` wrapper in `/usr/local/bin` replaces `GH_TOKEN` with my personal token under `/workspace/fun/`.
-- All other sessions must never use, list, deploy to, create sandboxes in, or change anything in the "CLIENT-TEAM" team, in any project.
-- Pass an explicit `--scope` to every `vercel` command, so that no command falls back to the "CLIENT-TEAM" team.

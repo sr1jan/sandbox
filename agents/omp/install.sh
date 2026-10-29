@@ -6,7 +6,8 @@
 #   - dev-environment skill
 #   - shared skills (shared/skills/*, also installed for Claude Code and Pi)
 #   - shared pattern JSONs
-#   - user-level AGENTS.md (agents/omp/AGENTS.md)
+#   - user-level AGENTS.md (agents/omp/AGENTS.md, plus the host-only
+#     $AGENT_HOME/.omp/agent/AGENTS.local.md when it exists)
 #
 # Binary layout (do NOT run `omp update` on this host):
 #   /usr/local/bin/omp            → sudo run → omp-launch
@@ -60,6 +61,12 @@ sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.omp/agent/patterns/"
 # agents/claude-code/CLAUDE.md) plus omp notes for this VM. Replaces any copy
 # edited only on the VM, so the repo stays the one source.
 sudo cp "$SANDBOX_DIR/agents/omp/AGENTS.md" "$AGENT_HOME/.omp/agent/AGENTS.md"
+# Host-only rules (server addresses, account limits) stay out of the public
+# repo, in a local file that sync never writes. Append it when it exists.
+AGENTS_LOCAL="$AGENT_HOME/.omp/agent/AGENTS.local.md"
+if sudo test -f "$AGENTS_LOCAL"; then
+  { echo; sudo cat "$AGENTS_LOCAL"; } | sudo tee -a "$AGENT_HOME/.omp/agent/AGENTS.md" >/dev/null
+fi
 sudo chown -R "$AGENT_USER:$AGENT_USER" "$AGENT_HOME/.omp"
 
 # --- binary install / update (targets /opt/omp/omp only) -----------------
