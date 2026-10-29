@@ -2,7 +2,7 @@
 # Install Oh My Pi (omp) for the 'agent' user. Idempotent.
 #
 # Installs only sandbox harness pieces:
-#   - cred-guard / redactor / tmux-tools extensions
+#   - cred-guard / redactor extensions
 #   - dev-environment skill
 #   - shared skills (shared/skills/*, also installed for Claude Code and Pi)
 #   - shared pattern JSONs
@@ -48,6 +48,9 @@ sudo -u "$AGENT_USER" mkdir -p \
   "$AGENT_HOME/.omp/agent/patterns"
 
 sudo cp "$SANDBOX_DIR/agents/omp/extensions/"*.ts "$AGENT_HOME/.omp/agent/extensions/"
+# tmux-tools was retired. cp never deletes, so drop the old copy on hosts
+# that still have it.
+sudo rm -f "$AGENT_HOME/.omp/agent/extensions/tmux-tools.ts"
 sudo cp -r "$SANDBOX_DIR/agents/omp/skills/"* "$AGENT_HOME/.omp/agent/skills/"
 sudo cp -r "$SANDBOX_DIR/shared/skills/"* "$AGENT_HOME/.omp/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.omp/agent/patterns/"
@@ -202,7 +205,7 @@ fi
 
 echo "[omp-install] Done. Binary: $("$OMP_BIN" --version 2>/dev/null || echo unknown)"
 echo "[omp-install] Provider keys live in /etc/devbox/locked/secrets (sudo sync-secrets)."
-echo "[omp-install] Sandbox extensions: cred-guard, redactor, tmux-tools."
+echo "[omp-install] Sandbox extensions: cred-guard, redactor."
 echo "[omp-install] For Cursor models: put CURSOR_API_KEY in locked secrets;"
 echo "[omp-install] refresh-cursor-token mints CURSOR_ACCESS_TOKEN (1h JWT) on omp start and mid-session."
 echo "[omp-install] Do not run \`omp update\` here — it would replace /usr/local/bin/omp (the wrapper)."

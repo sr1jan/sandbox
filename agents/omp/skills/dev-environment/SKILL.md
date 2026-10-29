@@ -36,36 +36,18 @@ Do **not** run `omp update`. On this host:
 `omp update` would overwrite the PATH wrapper. Ask the operator (ubuntu)
 to run sync / `agents/omp/install.sh`, which upgrades only `/opt/omp/omp`.
 
-## Running commands: bash first, tmux only when needed
+## Running commands: always the bash tool
 
-**Default: the bash tool.** Use it for tests, builds, typechecks, linters and
-one-shot scripts, with `async` for anything long. It returns exit codes, full
-output, and a notice when the run finishes. A tmux pane gives you none of
-that: output is scraped from the screen, a `clear` wipes it, and the job dies
-if the pane does.
+Use the bash tool for tests, builds, typechecks, linters, one-shot scripts and
+credentialed `sudo run` / `with_creds` commands, with `async` for anything
+long. It returns exit codes, full output, and a notice when the run finishes.
 
 **Long-running services (dev servers, workers):** use the bash tool's named
-service mode, which gives a ready check and logs via `proc://`. Use tmux only
-when the user wants to watch the process live.
+service mode, which gives a ready check and logs via `proc://`.
 
-**tmux is for credentialed commands the bash tool refuses.** The bash tool's
-credential guard may block `sudo run <cmd>`; `tmux_pane_send` is the
-sanctioned path. When you use it:
-
-1. `tmux_pane_create` opens the pane in a dedicated `agent-work` window of
-   this tmux session, in your working directory. It never splits the user's
-   window. Don't create or move panes by hand with raw `tmux` commands.
-2. **Detach anything that outlives a few seconds**, and read results from a
-   file, not the screen:
-   `(sudo run setsid nohup <cmd> > /tmp/<job>.log 2>&1 &)`
-   The job then survives the pane closing. Read `/tmp/<job>.log` with the
-   bash tool.
-3. **Clean up:** `tmux_pane_close` every pane you created. They are also
-   closed when your session ends.
-
-**Subagents can't use tmux:** the tools refuse them. When delegating, say
-"bash only". Read-only scouts don't execute commands at all: the parent runs
-and times things.
+**If the credential guard blocks a command** (for example `sudo run python …`
+or `sudo run node …`), do not look for a way around it. Give the user the
+exact command and the directory to run it from, and ask them to run it.
 
 ## Creating .env templates for new projects
 
