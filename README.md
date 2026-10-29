@@ -106,8 +106,8 @@ shipped your keypairs — otherwise step 3's `power.sh sync` retries them.
 
 | Path | Role |
 |---|---|
-| `/usr/local/bin/omp` | → `sudo run` → `omp-with-cursor` |
-| `/usr/local/bin/omp-with-cursor` | refresh Cursor JWT, prepend `~/.local/bin` to `PATH` (sudo strips it; omp resolves LSP servers from it) → `/opt/omp/omp` |
+| `/usr/local/bin/omp` | → `sudo run` → `omp-launch` |
+| `/usr/local/bin/omp-launch` | prepend `~/.local/bin` to `PATH` (sudo strips it; omp resolves LSP servers from it) → `/opt/omp/omp` |
 | `/opt/omp/omp` | real Oh My Pi binary |
 
 `omp update` resolves the PATH launcher and would overwrite `/usr/local/bin/omp` (the wrapper). Older `agents/omp/install.sh` could also `mv $(command -v omp)` onto `/opt/omp/omp` and replace the binary with the wrapper — never re-run a stale `/opt/sandbox` copy of that script.

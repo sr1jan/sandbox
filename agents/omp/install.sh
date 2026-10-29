@@ -9,8 +9,8 @@
 #   - user-level AGENTS.md (agents/omp/AGENTS.md)
 #
 # Binary layout (do NOT run `omp update` on this host):
-#   /usr/local/bin/omp            → sudo run → omp-with-cursor
-#   /usr/local/bin/omp-with-cursor → refresh Cursor JWT → /opt/omp/omp
+#   /usr/local/bin/omp            → sudo run → omp-launch
+#   /usr/local/bin/omp-launch     → restore ~/.local/bin on PATH → /opt/omp/omp
 #   /opt/omp/omp                  → real binary
 # `omp update` resolves the PATH launcher and would overwrite the wrapper.
 # This script updates only /opt/omp/omp when the installed version is older
@@ -183,19 +183,26 @@ sudo rm -f "$AGENT_HOME/.local/bin/omp"
 # must preserve HERDR_* across that sudo so herdr-agent-state can report
 # the pane (Agents sidebar).
 #
-# Built-in cursor provider: CURSOR_ACCESS_TOKEN (session JWT).
-# Dashboard User API Key (crsr_…) needs exchange into ACCESS_TOKEN first;
-# CURSOR_API_KEY alone is not enough for omp's built-in cursor client.
-# refresh-cursor-token re-mints the 1h JWT from CURSOR_API_KEY on each
-# omp start; cursor-token-refresh.ts re-exchanges during a long session.
-sudo install -m 755 "$SANDBOX_DIR/shared/scripts/refresh-cursor-token" /usr/local/bin/refresh-cursor-token
-sudo install -m 755 "$SANDBOX_DIR/shared/scripts/omp-with-cursor" /usr/local/bin/omp-with-cursor
+# omp-launch puts ~/.local/bin back on PATH (sudo strips it), then execs
+# /opt/omp/omp.
+sudo install -m 755 "$SANDBOX_DIR/shared/scripts/omp-launch" /usr/local/bin/omp-launch
 sudo tee /usr/local/bin/omp >/dev/null <<'EOF'
 #!/bin/bash
-exec sudo /usr/local/bin/run /usr/local/bin/omp-with-cursor "$@"
+exec sudo /usr/local/bin/run /usr/local/bin/omp-launch "$@"
 EOF
 sudo chmod 755 /usr/local/bin/omp
-sudo rm -f /etc/cron.d/refresh-cursor-token
+
+# The Cursor JWT wrapper (omp-with-cursor, refresh-cursor-token,
+# cursor-token-refresh.ts) was retired. Remove its files from hosts that
+# still have them. Also drop the JWT it wrote to ~/.omp/.env: omp loads that
+# file, and the token expires after 1h.
+sudo rm -f /usr/local/bin/omp-with-cursor /usr/local/bin/refresh-cursor-token \
+  /etc/cron.d/refresh-cursor-token \
+  "$AGENT_HOME/.omp/agent/extensions/cursor-token-refresh.ts"
+if sudo test -f "$AGENT_HOME/.omp/.env"; then
+  sudo -u "$AGENT_USER" sed -i \
+    '/^[[:space:]]*\(export[[:space:]]\+\)\?CURSOR_ACCESS_TOKEN=/d' "$AGENT_HOME/.omp/.env"
+fi
 
 # PATH addition for /home/agent/.local/bin (user-installed bins).
 if ! sudo -u "$AGENT_USER" grep -q "/home/agent/.local/bin" "$AGENT_HOME/.bashrc" 2>/dev/null; then
@@ -206,6 +213,4 @@ fi
 echo "[omp-install] Done. Binary: $("$OMP_BIN" --version 2>/dev/null || echo unknown)"
 echo "[omp-install] Provider keys live in /etc/devbox/locked/secrets (sudo sync-secrets)."
 echo "[omp-install] Sandbox extensions: cred-guard, redactor."
-echo "[omp-install] For Cursor models: put CURSOR_API_KEY in locked secrets;"
-echo "[omp-install] refresh-cursor-token mints CURSOR_ACCESS_TOKEN (1h JWT) on omp start and mid-session."
 echo "[omp-install] Do not run \`omp update\` here — it would replace /usr/local/bin/omp (the wrapper)."

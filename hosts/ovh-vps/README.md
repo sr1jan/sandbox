@@ -49,7 +49,7 @@ Run as agent (`./connect.sh agent`):
 | `./ship-keys.sh` | Re-ship SSH/GPG keys after rotation |
 | `./ship-project-env.sh <dir> <target>` | Ship a project's locked dotfile secrets |
 | on box: `pi` | Pi with provider keys injected per-invocation |
-| on box: `omp` | Oh My Pi (Cursor models via locked `CURSOR_API_KEY` → JWT refresh) |
+| on box: `omp` | Oh My Pi with provider keys injected per-invocation |
 | on box: `claude` | Claude Code (Claude Pro/Max subscription login — no `ANTHROPIC_API_KEY` required) |
 | on box: `tx` | tmux/tmuxinator layout (default multiplexer) |
 | on box: `hx` | herdr — alternative, agent-aware multiplexer |
@@ -57,7 +57,7 @@ Run as agent (`./connect.sh agent`):
 ### Updating omp
 
 Do **not** run `omp update` on this host. `/usr/local/bin/omp` is a
-`sudo run` → `omp-with-cursor` wrapper; the real binary lives at
+`sudo run` → `omp-launch` wrapper; the real binary lives at
 `/opt/omp/omp`. Self-update replaces the PATH launcher and can destroy
 the wrapper (or, with a stale install script, overwrite the binary with
 the wrapper and create a launch loop).

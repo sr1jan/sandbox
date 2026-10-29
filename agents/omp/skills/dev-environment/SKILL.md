@@ -30,7 +30,7 @@ subdirectory or `/tmp`, the project's keys are silently missing.
 
 Do **not** run `omp update`. On this host:
 
-- `/usr/local/bin/omp` is a wrapper → `sudo run` → `omp-with-cursor`
+- `/usr/local/bin/omp` is a wrapper → `sudo run` → `omp-launch`
 - `/opt/omp/omp` is the real binary
 
 `omp update` would overwrite the PATH wrapper. Ask the operator (ubuntu)
