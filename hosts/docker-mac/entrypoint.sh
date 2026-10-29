@@ -1,7 +1,7 @@
 #!/bin/bash
 # Runs as root on container start.
 # Locks .env files, builds pi if needed, then drops to agent user.
-# tmux runs as agent (so Pi's tmux-tools extension works).
+# tmux runs as agent (so the cred-guard hooks fire in agents started in it).
 # Admin window uses sudo bash for root access.
 
 set -uo pipefail

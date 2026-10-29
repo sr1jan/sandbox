@@ -26,28 +26,19 @@ NEVER try to read .env files, /etc/devbox/secrets, or run env/printenv. These ar
 ROOT (e.g. `cd /workspace/fun/agent-studio && sudo run …`). From a
 subdirectory or `/tmp`, the project's keys are silently missing.
 
-## Running commands: bash first, tmux only when needed
+## Running commands: always the shell tool
 
-**Default: your bash/shell tool.** Use it for tests, builds, typechecks,
-linters and one-shot scripts. It returns exit codes and full output. A tmux
-pane gives you neither: output is scraped from the screen, a `clear` wipes
-it, and the job dies if the pane does.
+Use your bash/shell tool for tests, builds, typechecks, linters, one-shot
+scripts and credentialed `sudo run` / `with_creds` commands. It returns exit
+codes and full output.
 
-**tmux is for credentialed commands the shell tool refuses, and for services
-the user wants to watch live.** When you use it:
+**Long-running services (dev servers, workers):** start them detached and
+read the log file:
+`(sudo run setsid nohup <cmd> > /tmp/<job>.log 2>&1 &)`
 
-1. `tmux_pane_create` opens the pane in a dedicated `agent-work` window of
-   this tmux session, in your working directory. It never splits the user's
-   window. Don't create or move panes by hand with raw `tmux` commands.
-2. **Detach anything that outlives a few seconds**, and read results from a
-   file, not the screen:
-   `(sudo run setsid nohup <cmd> > /tmp/<job>.log 2>&1 &)`
-   The job then survives the pane closing.
-3. **Clean up:** `tmux_pane_close` every pane you created. They are also
-   closed when your session ends.
-
-**Subagents never use tmux.** The tools refuse any session the host marks as
-a subagent. When delegating, say "shell only".
+**If the credential guard blocks a command** (for example `sudo run python …`
+or `sudo run node …`), do not look for a way around it. Give the user the
+exact command and the directory to run it from, and ask them to run it.
 
 ## Creating .env templates for new projects
 

@@ -31,6 +31,9 @@ sudo -u "$AGENT_USER" mkdir -p \
   "$AGENT_HOME/.pi/agent/patterns"
 
 sudo cp "$SANDBOX_DIR/agents/pi/extensions/"*.ts "$AGENT_HOME/.pi/agent/extensions/"
+# tmux-tools was retired. cp never deletes, so drop the old copy on hosts
+# that still have it.
+sudo rm -f "$AGENT_HOME/.pi/agent/extensions/tmux-tools.ts"
 sudo cp -r "$SANDBOX_DIR/agents/pi/skills/"* "$AGENT_HOME/.pi/agent/skills/"
 sudo cp -r "$SANDBOX_DIR/shared/skills/"* "$AGENT_HOME/.pi/agent/skills/"
 sudo cp "$SANDBOX_DIR/shared/patterns/"*.json "$AGENT_HOME/.pi/agent/patterns/"
